@@ -2022,12 +2022,13 @@
             ]);
           }
 
-          // 2. 初始化 gapi client (只需 API Key)
+          // 2. 初始化 gapi client 與 picker
           await new Promise((resolve, reject) => {
-            window.gapi.load('client', { callback: resolve, onerror: reject });
+            window.gapi.load('client:picker', { callback: resolve, onerror: reject });
           });
+          const API_KEY = 'AIzaSyDG2M2uSIXncvYFKu-86taPiv46SoIziCM';
           await window.gapi.client.init({
-            apiKey: 'AIzaSyDG2M2uSIXncvYFKu-86taPiv46SoIziCM', // TODO: 請填入你的 Google API Key
+            apiKey: API_KEY, // TODO: 請填入你的 Google API Key
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
           });
 
@@ -2041,64 +2042,65 @@
               }
 
               try {
-                // 4. 取得 token 後，列出 JSON 檔案
-                const response = await window.gapi.client.drive.files.list({
-                  q: "mimeType='application/json' and trashed=false",
-                  pageSize: 20,
-                  fields: 'files(id, name)'
-                });
+                // 4. 建立並顯示 Google Picker UI
+                const view = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS);
+                view.setIncludeFolders(true); // 允許選取資料夾內的檔案
                 
-                const files = response.result.files;
-                if (!files || files.length === 0) {
-                  alert('Google Drive 中沒有可用的 JSON 檔案');
-                  return;
-                }
+                const picker = new window.google.picker.PickerBuilder()
+                  .addView(view)
+                  .setOAuthToken(tokenResponse.access_token)
+                  .setDeveloperKey(API_KEY)
+                  .setCallback(async (data) => {
+                    // 等待使用者選取檔案
+                    if (data[window.google.picker.Response.ACTION] === window.google.picker.Action.PICKED) {
+                      const doc = data[window.google.picker.Response.DOCUMENTS][0];
+                      const fileId = doc[window.google.picker.Document.ID];
+                      
+                      try {
+                        // 5. 下載選取檔案的內容
+                        const fileRes = await window.gapi.client.drive.files.get({
+                          fileId: fileId,
+                          alt: 'media'
+                        });
+                        
+                        let docData;
+                        try {
+                          docData = typeof fileRes.body === 'string' ? JSON.parse(fileRes.body) : fileRes.result;
+                        } catch (e) {
+                          alert('檔案格式錯誤，請確認這是正確的行程 JSON 檔案');
+                          return;
+                        }
 
-                // 5. 選擇檔案
-                const fileNameList = files.map((f, i) => `${i + 1}. ${f.name}`).join('\n');
-                const idx = prompt(`選擇要載入的檔案：\n${fileNameList}\n請輸入編號 (1-${files.length})`);
-                if (!idx) return;
-                
-                const file = files[parseInt(idx, 10) - 1];
-                if (!file) {
-                  alert('無效的選擇');
-                  return;
-                }
+                        // 6. 匯入資料
+                        if (!Array.isArray(docData) || docData.length === 0) {
+                          alert('JSON 檔案內容格式不正確');
+                          return;
+                        }
+                        
+                        state.itinerary = normalizeItinerary(docData);
+                        state.currentDay = 0;
+                        state.currentSpot = null;
+                        saveItinerary();
+                        renderDayTabs();
+                        renderSpotList();
+                        showDayOnMap();
+                        scheduleNotifications && scheduleNotifications();
+                        closeModal && closeModal('settings-modal');
+                        alert('✅ 已成功從 Google Drive 載入！');
 
-                // 6. 下載檔案內容
-                const fileRes = await window.gapi.client.drive.files.get({
-                  fileId: file.id,
-                  alt: 'media'
-                });
-                
-                let data;
-                try {
-                  data = typeof fileRes.body === 'string' ? JSON.parse(fileRes.body) : fileRes.result;
-                } catch (e) {
-                  alert('檔案格式錯誤，請確認是正確的行程 JSON 檔案');
-                  return;
-                }
-
-                // 7. 匯入資料
-                if (!Array.isArray(data) || data.length === 0) {
-                  alert('JSON 檔案內容格式不正確');
-                  return;
-                }
-                
-                state.itinerary = normalizeItinerary(data);
-                state.currentDay = 0;
-                state.currentSpot = null;
-                saveItinerary();
-                renderDayTabs();
-                renderSpotList();
-                showDayOnMap();
-                scheduleNotifications && scheduleNotifications();
-                closeModal && closeModal('settings-modal');
-                alert('✅ 已成功從 Google Drive 載入行程！');
+                      } catch (err) {
+                        console.error(err);
+                        alert('下載檔案時發生錯誤：' + (err.message || JSON.stringify(err)));
+                      }
+                    }
+                  })
+                  .build();
+                  
+                picker.setVisible(true);
 
               } catch (err) {
                 console.error(err);
-                alert('取得檔案時發生錯誤：' + (err.message || JSON.stringify(err)));
+                alert('開啟檔案選擇器發生錯誤：' + (err.message || JSON.stringify(err)));
               }
             }
           });
