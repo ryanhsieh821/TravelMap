@@ -20,7 +20,7 @@
   <header id="header">
     <div class="header-left">
       <span class="logo">🌴</span>
-      <h1>沖繩旅遊地圖</h1>
+      <h1 id="app-title-display">沖繩旅遊地圖</h1>
     </div>
     <div class="header-right">
       <button id="btn-weather" class="header-btn" title="天氣預報">🌤️</button>
@@ -222,11 +222,6 @@
           <p class="settings-desc">從 JSON 檔案載入行程（會覆蓋目前資料）</p>
           <input type="file" id="import-file" accept=".json,application/json" class="hidden">
           <button id="btn-import" class="btn-secondary">📂 選擇檔案</button>
-        </div>
-        <div class="settings-section">
-          <h3>☁️ 從 Google Drive 載入行程</h3>
-          <p class="settings-desc">登入 Google 帳號並選取雲端硬碟中的 JSON 行程檔案</p>
-          <button id="btn-import-gdrive" class="btn-secondary">☁️ 從 Google Drive 載入</button>
         </div>
         <div class="settings-section">
           <h3>🔄 重置行程</h3>

@@ -2248,7 +2248,24 @@
     // 優先設定 App Title
     document.title = state.appTitle;
     const titleEl = document.getElementById('app-title-display');
-    if (titleEl) titleEl.textContent = state.appTitle;
+    if (titleEl) {
+      titleEl.textContent = state.appTitle;
+      
+      // 允許使用者直接點擊修改主標題
+      titleEl.style.cursor = 'pointer';
+      titleEl.title = '點擊修改旅程名稱';
+      titleEl.innerHTML += ' <span style="font-size:14px;opacity:0.6;">✏️</span>';
+      
+      titleEl.addEventListener('click', () => {
+        const newTitle = prompt('✏️ 請輸入新的旅程名稱：', state.appTitle);
+        if (newTitle && newTitle.trim()) {
+          state.appTitle = newTitle.trim();
+          localStorage.setItem('okinawa_app_title', state.appTitle);
+          document.title = state.appTitle;
+          titleEl.innerHTML = esc(state.appTitle) + ' <span style="font-size:14px;opacity:0.6;">✏️</span>';
+        }
+      });
+    }
 
     applyDarkMode();
     initMap();
