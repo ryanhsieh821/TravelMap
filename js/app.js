@@ -2003,76 +2003,113 @@
     const btnGDrive = document.getElementById('btn-import-gdrive');
     if (btnGDrive) {
       btnGDrive.addEventListener('click', async () => {
-        // 1. 載入 Google API script
-        if (!window.gapi) {
-          const script = document.createElement('script');
-          script.src = 'https://apis.google.com/js/api.js';
-          document.body.appendChild(script);
-          await new Promise(res => { script.onload = res; });
-        }
+        try {
+          // 1. 載入 Google API script 與 Google Identity Services
+          if (!window.gapi || !window.google) {
+            await Promise.all([
+              new Promise(res => {
+                const script = document.createElement('script');
+                script.src = 'https://apis.google.com/js/api.js';
+                script.onload = res;
+                document.body.appendChild(script);
+              }),
+              new Promise(res => {
+                const script = document.createElement('script');
+                script.src = 'https://accounts.google.com/gsi/client';
+                script.onload = res;
+                document.body.appendChild(script);
+              })
+            ]);
+          }
 
-        // 2. 初始化 Google API client
-        window.gapi.load('client:auth2', async () => {
+          // 2. 初始化 gapi client (只需 API Key)
+          await new Promise((resolve, reject) => {
+            window.gapi.load('client', { callback: resolve, onerror: reject });
+          });
           await window.gapi.client.init({
-            apiKey: 'YOUR_API_KEY', // TODO: 請填入你的 Google API Key
-            clientId: 'YOUR_CLIENT_ID', // TODO: 請填入你的 OAuth 2.0 Client ID
-            discoveryDocs: [
-              'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
-            ],
-            scope: 'https://www.googleapis.com/auth/drive.readonly'
+            apiKey: 'AIzaSyDG2M2uSIXncvYFKu-86taPiv46SoIziCM', // TODO: 請填入你的 Google API Key
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
           });
 
-          // 3. 登入 Google 帳號
-          const GoogleAuth = window.gapi.auth2.getAuthInstance();
-          await GoogleAuth.signIn();
+          // 3. 使用 Google Identity Services 取得 Access Token
+          const tokenClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: '395992156922-r8tuo6a0f6nk3u395ulej55j26f7b1ce.apps.googleusercontent.com', // TODO: 請填入你的 OAuth 2.0 Client ID
+            scope: 'https://www.googleapis.com/auth/drive.readonly',
+            callback: async (tokenResponse) => {
+              if (tokenResponse.error !== undefined) {
+                throw tokenResponse;
+              }
 
-          // 4. 彈出檔案選擇器（僅顯示 .json 檔）
-          const response = await window.gapi.client.drive.files.list({
-            q: "mimeType='application/json' and trashed=false",
-            pageSize: 20,
-            fields: 'files(id, name)'
+              try {
+                // 4. 取得 token 後，列出 JSON 檔案
+                const response = await window.gapi.client.drive.files.list({
+                  q: "mimeType='application/json' and trashed=false",
+                  pageSize: 20,
+                  fields: 'files(id, name)'
+                });
+                
+                const files = response.result.files;
+                if (!files || files.length === 0) {
+                  alert('Google Drive 中沒有可用的 JSON 檔案');
+                  return;
+                }
+
+                // 5. 選擇檔案
+                const fileNameList = files.map((f, i) => `${i + 1}. ${f.name}`).join('\n');
+                const idx = prompt(`選擇要載入的檔案：\n${fileNameList}\n請輸入編號 (1-${files.length})`);
+                if (!idx) return;
+                
+                const file = files[parseInt(idx, 10) - 1];
+                if (!file) {
+                  alert('無效的選擇');
+                  return;
+                }
+
+                // 6. 下載檔案內容
+                const fileRes = await window.gapi.client.drive.files.get({
+                  fileId: file.id,
+                  alt: 'media'
+                });
+                
+                let data;
+                try {
+                  data = typeof fileRes.body === 'string' ? JSON.parse(fileRes.body) : fileRes.result;
+                } catch (e) {
+                  alert('檔案格式錯誤，請確認是正確的行程 JSON 檔案');
+                  return;
+                }
+
+                // 7. 匯入資料
+                if (!Array.isArray(data) || data.length === 0) {
+                  alert('JSON 檔案內容格式不正確');
+                  return;
+                }
+                
+                state.itinerary = normalizeItinerary(data);
+                state.currentDay = 0;
+                state.currentSpot = null;
+                saveItinerary();
+                renderDayTabs();
+                renderSpotList();
+                showDayOnMap();
+                scheduleNotifications && scheduleNotifications();
+                closeModal && closeModal('settings-modal');
+                alert('✅ 已成功從 Google Drive 載入行程！');
+
+              } catch (err) {
+                console.error(err);
+                alert('取得檔案時發生錯誤：' + (err.message || JSON.stringify(err)));
+              }
+            }
           });
-          const files = response.result.files;
-          if (!files || files.length === 0) {
-            alert('Google Drive 沒有可用的 JSON 檔案');
-            return;
-          }
 
-          // 5. 讓使用者選擇檔案
-          const fileNameList = files.map((f, i) => `${i + 1}. ${f.name}`).join('\n');
-          const idx = prompt(`選擇要載入的檔案：\n${fileNameList}\n請輸入編號 (1-${files.length})`);
-          const file = files[parseInt(idx, 10) - 1];
-          if (!file) return;
+          // 觸發登入視窗
+          tokenClient.requestAccessToken({ prompt: 'consent' });
 
-          // 6. 下載檔案內容
-          const fileRes = await window.gapi.client.drive.files.get({
-            fileId: file.id,
-            alt: 'media'
-          });
-          let data;
-          try {
-            data = JSON.parse(fileRes.body);
-          } catch (e) {
-            alert('檔案格式錯誤，請確認是正確的行程 JSON 檔案');
-            return;
-          }
-
-          // 7. 匯入行程資料
-          if (!Array.isArray(data) || data.length === 0) {
-            alert('JSON 檔案內容格式不正確');
-            return;
-          }
-          state.itinerary = normalizeItinerary(data);
-          state.currentDay = 0;
-          state.currentSpot = null;
-          saveItinerary();
-          renderDayTabs();
-          renderSpotList();
-          showDayOnMap();
-          scheduleNotifications && scheduleNotifications();
-          closeModal && closeModal('settings-modal');
-          alert('✅ 已從 Google Drive 載入行程！');
-        });
+        } catch (error) {
+          console.error(error);
+          alert('初始化 Google API 失敗，請確認你的 API 金鑰與 Client ID 是否正確。錯誤：' + (error.message || error.details || ''));
+        }
       });
     }
     initNotifications();
