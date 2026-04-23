@@ -1006,26 +1006,125 @@
     localStorage.setItem('okinawa_photos', JSON.stringify(photos));
   }
 
-  function capturePhoto(spot) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
-    input.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        // Compress to max 200KB
+  async function uploadToCloudinary(dataUrl) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const cloudName = 'dbzbapkcn'; // TODO: 填入你的 Cloudinary Cloud Name
+        const uploadPreset = 'TravelMap';     // TODO: 填入你設定的 Unsigned Upload Preset
+        
+        if (cloudName === 'YOUR_CLOUDINARY_CLOUD_NAME') {
+          return reject(new Error('Cloudinary 尚未設定！請至程式碼中填入你的 Cloud Name 與 preset。'));
+        }
 
-        compressImage(ev.target.result, 800, 0.7).then(compressed => {
-          savePhoto(spot.id, compressed);
-          renderPhotoGallery();
+        const form = new FormData();
+        form.append('file', dataUrl);
+        form.append('upload_preset', uploadPreset);
+        
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          body: form
         });
-      };
-      reader.readAsDataURL(file);
+        
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error?.message || '上傳失敗');
+
+        resolve({
+          id: data.public_id,
+          webViewLink: data.secure_url, // 原始圖片連結
+          previewUrl: data.secure_url   // Cloudinary 可以產生各種預覽，這裡我們先儲存這個原始檔連結
+        });
+      } catch (err) {
+        reject(err);
+      }
     });
-    input.click();
+  }
+
+  function capturePhoto(spot) {
+    // 1. 動態建立選擇模式的 UI
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'background:var(--bg-card,#fff);padding:20px;border-radius:12px;width:90%;max-width:320px;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.2);';
+    dialog.innerHTML = `
+      <h3 style="margin-top:0;">📸 選擇儲存方式</h3>
+      <p style="font-size:14px;color:var(--text-secondary,#666);margin-bottom:20px;">你要將這張照片存在哪裡？</p>
+      <button id="btn-save-cloudinary" class="btn-primary" style="width:100%;margin-bottom:10px;font-size:16px;">☁️ 上傳至 Cloudinary</button>
+      <button id="btn-save-local" class="btn-secondary" style="width:100%;margin-bottom:10px;font-size:16px;">📱 僅存在本機相簿</button>
+      <button id="btn-save-cancel" style="width:100%;background:transparent;border:none;color:var(--text-secondary,#666);padding:10px;">取消</button>
+    `;
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    const closeOverlay = () => document.body.removeChild(overlay);
+
+    // 取消按鈕
+    dialog.querySelector('#btn-save-cancel').onclick = closeOverlay;
+
+    // 定義開啟相機/檔案選擇的共用邏輯
+    const proceedWithFilePicker = (useCloudinary) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment';
+      input.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const btnList = document.querySelectorAll(`.btn-photo[data-spot-id="${spot.id}"]`);
+        btnList.forEach(btn => btn.textContent = '⏳ 處理中...');
+
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          try {
+            // 壓縮圖片
+            const compressed = await compressImage(ev.target.result, 800, 0.7);
+            
+            if (useCloudinary) {
+              btnList.forEach(btn => btn.textContent = '☁️ 上傳中...');
+              // 上傳並取得雲端 URL
+              const clData = await uploadToCloudinary(compressed);
+              
+              // 將照片連結加入行程資料的 JSON
+              if (!spot.photos) spot.photos = [];
+              spot.photos.push({
+                id: clData.id,
+                url: clData.webViewLink,
+                preview: clData.previewUrl,
+                date: new Date().toISOString()
+              });
+              saveItinerary();
+              alert('✅ 照片已上傳至 Cloudinary！\n(將隨著行程 JSON 匯出與同步)');
+            } else {
+              // 本機儲存
+              savePhoto(spot.id, compressed);
+              alert('✅ 已將照片暫存於本機相簿');
+            }
+          } catch (err) {
+            console.error(err);
+            alert('❌ 上傳發生錯誤：\n' + (err.message || JSON.stringify(err)));
+          } finally {
+            btnList.forEach(btn => btn.textContent = '📸 拍照');
+            renderPhotoGallery();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+      input.click();
+    };
+
+    // 點擊本機儲存
+    dialog.querySelector('#btn-save-local').onclick = () => {
+      closeOverlay();
+      proceedWithFilePicker(false);
+    };
+
+    // 點擊 Cloudinary 儲存 
+    dialog.querySelector('#btn-save-cloudinary').onclick = () => {
+      closeOverlay();
+      proceedWithFilePicker(true);
+    };
   }
 
   function compressImage(dataUrl, maxWidth, quality) {
@@ -1049,18 +1148,40 @@
     const container = document.getElementById('photo-gallery');
     const allSpots = state.itinerary.flatMap(d => d.spots);
 
-    container.innerHTML = allSpots
-      .filter(spot => photos[spot.id] && photos[spot.id].length > 0)
-      .map(spot => `
-        <div class="photo-spot-section">
-          <div class="photo-spot-title">📍 ${esc(spot.name)}</div>
-          <div class="photo-grid">
-            ${photos[spot.id].map(p =>
-              `<img src="${p.url}" alt="${spot.name}" loading="lazy">`
-            ).join('')}
+    const galleryHtml = allSpots
+      .map(spot => {
+        // 取得本機的 Base64 圖片
+        const localPhotos = photos[spot.id] || [];
+        // 取得存在行程 JSON (Cloudinary等雲端儲存) 的圖片
+        const cloudPhotos = spot.photos ? spot.photos.map(p => ({
+          url: p.preview || p.url, // 縮圖
+          link: p.url,             // 原圖連結
+          isCloud: true
+        })) : [];
+
+        const allSpotPhotos = [...localPhotos, ...cloudPhotos];
+        
+        if (allSpotPhotos.length === 0) return '';
+
+        return `
+          <div class="photo-spot-section">
+            <div class="photo-spot-title">📍 ${esc(spot.name)}</div>
+            <div class="photo-grid">
+              ${allSpotPhotos.map(p => 
+                p.isCloud 
+                  ? `<a href="${p.link}" target="_blank" title="在新分頁檢視原圖">
+                       <img src="${p.url}" alt="${spot.name}" loading="lazy" style="border: 2px solid #5fa8d3;">
+                     </a>`
+                  : `<img src="${p.url}" alt="${spot.name}" loading="lazy">`
+              ).join('')}
+            </div>
           </div>
-        </div>
-      `).join('') || '<p style="color:var(--text-secondary);text-align:center;padding:40px 0;">還沒有照片，去景點拍一張吧！📸</p>';
+        `;
+      })
+      .filter(html => html !== '')
+      .join('');
+
+    container.innerHTML = galleryHtml || '<p style="color:var(--text-secondary);text-align:center;padding:40px 0;">還沒有照片，去景點拍一張吧！📸</p>';
   }
 
   // ==================== Dark Mode ====================
