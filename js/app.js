@@ -272,27 +272,49 @@
 
     // Day Header with Edit Button
     const dayHeader = document.createElement('div');
-    dayHeader.style.cssText = 'padding: 12px; background: var(--bg-card); margin-bottom: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06);';
-    dayHeader.innerHTML = `
-      <div>
-        <div style="font-weight: bold; font-size: 16px; margin-bottom:4px; color: var(--text)">${esc(day.title)}</div>
-        <div style="font-size: 13px; color: var(--text-secondary);">${esc(day.date)}</div>
-      </div>
-      <button id="btn-edit-day" title="編輯日期與標題" style="background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 5px;">✏️</button>
-    `;
+    dayHeader.style.cssText = 'padding: 12px; background: var(--bg-card); margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06);';
     
-    dayHeader.querySelector('#btn-edit-day').addEventListener('click', () => {
-      const newTitle = prompt('請輸入這天的標題：', day.title);
-      if (newTitle === null) return;
-      const newDate = prompt('請輸入日期 (例如 2025-05-01)：', day.date);
-      if (newDate === null) return;
+    function renderDayHeaderView() {
+      dayHeader.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: bold; font-size: 16px; margin-bottom:4px; color: var(--text)">${esc(day.title)}</div>
+            <div style="font-size: 13px; color: var(--text-secondary);">${esc(day.date)}</div>
+          </div>
+          <button class="btn-edit-day" title="編輯日期與標題" style="background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 5px;">✏️</button>
+        </div>
+      `;
+      dayHeader.querySelector('.btn-edit-day').addEventListener('click', renderDayHeaderEdit);
+    }
+    
+    function renderDayHeaderEdit() {
+      dayHeader.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <input type="text" id="edit-day-title" value="${esc(day.title)}" placeholder="標題 (例如：南部海灘之旅)" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+          <input type="date" id="edit-day-date" value="${esc(day.date)}" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+          <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px;">
+            <button class="btn-cancel-edit-day" style="padding: 5px 10px; background: #eee; border: none; border-radius: 4px; cursor: pointer;">取消</button>
+            <button class="btn-save-edit-day" style="padding: 5px 10px; background: var(--primary-color, #0f3460); color: white; border: none; border-radius: 4px; cursor: pointer;">儲存</button>
+          </div>
+        </div>
+      `;
       
-      day.title = newTitle.trim();
-      day.date = newDate.trim();
-      saveItinerary();
-      renderSpotList();
-      renderDayTabs(); // Tabs might need to update if we add date there in the future
-    });
+      dayHeader.querySelector('.btn-cancel-edit-day').addEventListener('click', renderDayHeaderView);
+      
+      dayHeader.querySelector('.btn-save-edit-day').addEventListener('click', () => {
+        const newTitle = dayHeader.querySelector('#edit-day-title').value.trim();
+        const newDate = dayHeader.querySelector('#edit-day-date').value;
+        if (newTitle) day.title = newTitle;
+        if (newDate) day.date = newDate;
+        
+        saveItinerary();
+        renderDayTabs();
+        renderSpotList(); 
+        // Note: Changing date might also trigger a re-fetch of weather if needed in a more advanced update
+      });
+    }
+
+    renderDayHeaderView();
     
     container.appendChild(dayHeader);
 
@@ -317,12 +339,30 @@
           </div>
       ` : '';
 
+      const photosData = getPhotos();
+      const localPhotos = photosData[spot.id] || [];
+      const cloudPhotos = spot.photos ? spot.photos.map(p => ({
+        url: p.preview || p.url,
+        link: p.url,
+        isCloud: true
+      })) : [];
+      const allSpotPhotos = [...localPhotos, ...cloudPhotos];
+      let galleryHtml = '';
+      if (allSpotPhotos.length > 0) {
+        galleryHtml = `
+          <div class="spot-inline-photos" style="display: flex; gap: 8px; margin: 8px 0; overflow-x: auto;">
+            ${allSpotPhotos.map(p => `<img src="${p.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; flex-shrink: 0;" alt="photo">`).join('')}
+          </div>
+        `;
+      }
+
       card.innerHTML = `
         <div class="spot-header">
           <button class="spot-visited-btn btn-toggle-visited" data-spot-id="${spot.id}" title="打卡">${isVisited(spot.id) ? '✅' : '⬜'}</button>
           <span class="spot-name">${esc(spot.name)}</span>
           <span class="spot-time">${esc(spot.time)} · ${spot.duration}分</span>
         </div>
+        ${galleryHtml}
         <div class="spot-desc">${esc(spot.description)}</div>
         ${spot.tips ? `<div class="spot-tips">💡 ${esc(spot.tips)}</div>` : ''}
         <div class="spot-actions">
@@ -470,8 +510,23 @@
     if (!day) return;
 
     const bounds = [];
+    const photos = getPhotos();
 
     day.spots.forEach((spot, i) => {
+      const localPhotos = photos[spot.id] || [];
+      const cloudPhotos = spot.photos ? spot.photos.map(p => ({
+        url: p.preview || p.url,
+        link: p.url,
+        isCloud: true
+      })) : [];
+
+      const allSpotPhotos = [...localPhotos, ...cloudPhotos];
+      let photoHtml = '';
+      if (allSpotPhotos.length > 0) {
+        // 取最新的第一張照片顯示在 popup 中
+        photoHtml = `<div style="margin-top:8px;text-align:center;"><img src="${allSpotPhotos[allSpotPhotos.length - 1].url}" style="width:100%; max-height:120px; object-fit:cover; border-radius:4px;"></div>`;
+      }
+
       const marker = L.marker([spot.lat, spot.lng], {
         icon: createIcon('marker-spot', i + 1)
       }).addTo(state.markerLayer);
@@ -479,6 +534,7 @@
       marker.bindPopup(`
         <div class="popup-title">${esc(spot.name)}</div>
         <div class="popup-detail">${esc(spot.time)} · ${spot.duration}分鐘</div>
+        ${photoHtml}
       `);
 
       bounds.push([spot.lat, spot.lng]);
