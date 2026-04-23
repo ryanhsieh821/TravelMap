@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>沖繩旅遊地圖</title>
+  <meta name="description" content="6天5夜沖繩親子旅遊地圖">
+  <meta name="theme-color" content="#0f3460">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header id="header">
+    <div class="header-left">
+      <span class="logo">🌴</span>
+      <h1>沖繩旅遊地圖</h1>
+    </div>
+    <div class="header-right">
+      <button id="btn-weather" class="header-btn" title="天氣預報">🌤️</button>
+      <button id="btn-expense" class="header-btn" title="旅費記帳">💰</button>
+      <button id="btn-checklist" class="header-btn" title="行前清單">📋</button>
+      <button id="btn-photo" class="header-btn" title="照片回憶">📸</button>
+      <button id="btn-tools" class="header-btn" title="旅遊工具">🧰</button>
+      <button id="btn-darkmode" class="header-btn" title="深色模式">🌙</button>
+      <button id="btn-settings" class="header-btn" title="行程管理">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div id="main">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <button id="sidebar-toggle" aria-label="收合側邊欄">◀</button>
+      <div id="sheet-handle" class="sheet-handle">
+        <div class="sheet-handle-bar"></div>
+      </div>
+      <div id="day-tabs"></div>
+      <div id="spot-list"></div>
+    </aside>
+
+    <!-- Map -->
+    <div id="map"></div>
+  </div>
+
+  <!-- Fullscreen Itinerary Modal (mobile) -->
+  <div id="itinerary-modal" class="modal hidden">
+    <div class="modal-content itinerary-modal-content">
+      <div class="modal-header">
+        <h2 id="itinerary-modal-title">📍 行程列表</h2>
+        <button class="modal-close" data-modal="itinerary-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-day-tabs"></div>
+        <div id="modal-spot-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expense Modal -->
+  <div id="expense-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>💰 旅費記帳</h2>
+        <button class="modal-close" data-modal="expense-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="expense-form">
+          <select id="expense-category">
+            <option value="food">🍜 餐飲</option>
+            <option value="transport">🚗 交通</option>
+            <option value="ticket">🎫 門票</option>
+            <option value="shopping">🛍️ 購物</option>
+            <option value="hotel">🏨 住宿</option>
+            <option value="other">📦 其他</option>
+          </select>
+          <input type="text" id="expense-name" placeholder="項目名稱">
+          <input type="number" id="expense-amount" placeholder="金額 (JPY)" min="0">
+          <button id="expense-add">新增</button>
+        </div>
+        <div id="expense-summary"></div>
+        <div id="expense-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checklist Modal -->
+  <div id="checklist-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📋 行前備忘清單</h2>
+        <button class="modal-close" data-modal="checklist-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="checklist-items"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weather Modal -->
+  <div id="weather-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🌤️ 天氣預報</h2>
+        <button class="modal-close" data-modal="weather-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="weather-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo Modal -->
+  <div id="photo-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📸 景點照片</h2>
+        <button class="modal-close" data-modal="photo-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="photo-gallery"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spot Editor Modal -->
+  <div id="spot-editor-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="spot-editor-title">✏️ 新增景點</h2>
+        <button class="modal-close" data-modal="spot-editor-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="spot-editor-form">
+          <input type="hidden" id="edit-spot-id">
+          <div class="form-group">
+            <label for="edit-spot-name">景點名稱 *</label>
+            <input type="text" id="edit-spot-name" required placeholder="例：美麗海水族館">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-spot-time">開始時間</label>
+              <input type="time" id="edit-spot-time" value="09:00">
+            </div>
+            <div class="form-group">
+              <label for="edit-spot-duration">停留(分鐘)</label>
+              <input type="number" id="edit-spot-duration" value="60" min="5" max="480">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-spot-lat">緯度 *</label>
+              <input type="number" id="edit-spot-lat" step="0.0001" required placeholder="26.3344">
+            </div>
+            <div class="form-group">
+              <label for="edit-spot-lng">經度 *</label>
+              <input type="number" id="edit-spot-lng" step="0.0001" required placeholder="127.7731">
+            </div>
+          </div>
+          <button type="button" id="btn-map-pick" class="btn-secondary">📍 從地圖選取座標</button>
+          <div class="form-group">
+            <label for="edit-spot-desc">描述</label>
+            <textarea id="edit-spot-desc" rows="2" placeholder="景點簡介"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="edit-spot-tips">旅遊小提示</label>
+            <textarea id="edit-spot-tips" rows="2" placeholder="💡 實用建議"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-transport-mode">前往下一站方式</label>
+              <select id="edit-transport-mode">
+                <option value="">（無）</option>
+                <option value="car">🚗 開車</option>
+                <option value="walk">🚶 步行</option>
+                <option value="monorail">🚝 單軌</option>
+                <option value="bus">🚌 公車</option>
+                <option value="taxi">🚕 計程車</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="edit-transport-duration">車程(分鐘)</label>
+              <input type="number" id="edit-transport-duration" min="0" max="300" placeholder="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="edit-transport-note">交通備註</label>
+            <input type="text" id="edit-transport-note" placeholder="例：走 58 號國道">
+          </div>
+          <button type="submit" class="btn-primary" id="btn-save-spot">💾 儲存</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚙️ 行程管理</h2>
+        <button class="modal-close" data-modal="settings-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h3>☁️ 從 GitHub 載入行程</h3>
+          <p class="settings-desc">從 GitHub 上重新抓取預設行程（會覆蓋目前資料）</p>
+          <button id="btn-reload-github" class="btn-primary">🔄 從 GitHub 重新載入</button>
+        </div>
+        <div class="settings-section">
+          <h3>📤 匯出行程</h3>
+          <p class="settings-desc">將目前行程下載為 JSON 檔案，可分享給朋友</p>
+          <button id="btn-export" class="btn-primary">📥 下載 JSON</button>
+        </div>
+        <div class="settings-section">
+          <h3>📥 匯入行程</h3>
+          <p class="settings-desc">從 JSON 檔案載入行程（會覆蓋目前資料）</p>
+          <input type="file" id="import-file" accept=".json,application/json" class="hidden">
+          <button id="btn-import" class="btn-secondary">📂 選擇檔案</button>
+        </div>
+        <div class="settings-section">
+          <h3>☁️ 從 Google Drive 載入行程</h3>
+          <p class="settings-desc">登入 Google 帳號並選取雲端硬碟中的 JSON 行程檔案</p>
+          <button id="btn-import-gdrive" class="btn-secondary">☁️ 從 Google Drive 載入</button>
+        </div>
+        <div class="settings-section">
+          <h3>🔄 重置行程</h3>
+          <p class="settings-desc">恢復為內建預設的 6 天行程（離線可用）</p>
+          <button id="btn-reset" class="btn-danger">🗑️ 重置為預設</button>
+        </div>
+        <div class="settings-section">
+          <h3>🧹 清理本機資料</h3>
+          <p class="settings-desc">清空 localStorage 所有資料（行程、記帳、清單、照片等），頁面會重新載入</p>
+          <button id="btn-clear-storage" class="btn-danger">🧹 清空 localStorage</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Travel Tools Modal -->
+  <div id="tools-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🧰 旅遊工具</h2>
+        <button class="modal-close" data-modal="tools-modal">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-top:0;">
+        <div class="tools-tabs">
+          <button class="tools-tab active" data-tab="currency">💱 匯率</button>
+          <button class="tools-tab" data-tab="phrases">🗣️ 日語</button>
+          <button class="tools-tab" data-tab="emergency">🆘 緊急</button>
+        </div>
+
+        <!-- Currency Converter -->
+        <div id="tools-currency" class="tools-panel">
+          <div class="currency-converter">
+            <div class="currency-row">
+              <label>🇯🇵 日幣 (JPY)</label>
+              <input type="number" id="currency-jpy" placeholder="0" min="0">
+            </div>
+            <div class="currency-arrow">⇄</div>
+            <div class="currency-row">
+              <label>🇹🇼 台幣 (TWD)</label>
+              <input type="number" id="currency-twd" placeholder="0" min="0">
+            </div>
+            <div class="currency-rate">
+              <span>匯率：<strong id="currency-rate-display">1 JPY ≈ 0.22 TWD</strong></span>
+              <button id="btn-update-rate" class="btn-sm">🔄 更新匯率</button>
+            </div>
+            <div class="currency-quick">
+              <span class="currency-quick-label">快速換算：</span>
+              <div class="currency-quick-chips">
+                <button class="chip" data-jpy="500">¥500</button>
+                <button class="chip" data-jpy="1000">¥1,000</button>
+                <button class="chip" data-jpy="3000">¥3,000</button>
+                <button class="chip" data-jpy="5000">¥5,000</button>
+                <button class="chip" data-jpy="10000">¥10,000</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Japanese Phrases -->
+        <div id="tools-phrases" class="tools-panel hidden">
+          <div id="phrases-list"></div>
+        </div>
+
+        <!-- Emergency Info -->
+        <div id="tools-emergency" class="tools-panel hidden">
+          <div id="emergency-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map Pick Overlay -->
+  <div id="map-pick-overlay" class="hidden">
+    <div class="map-pick-bar">
+      <span>📍 點擊地圖選取座標</span>
+      <button id="btn-cancel-pick" class="btn-secondary">取消</button>
+    </div>
+  </div>
+
+  <!-- FAB: Add Spot -->
+  <button id="fab-add-spot" class="fab" title="新增景點">＋</button>
+
+  <!-- Notification Permission Banner -->
+  <div id="notification-banner" class="hidden">
+    <p>🔔 開啟通知以接收景點到達提醒</p>
+    <button id="btn-allow-notify">允許</button>
+    <button id="btn-dismiss-notify">稍後</button>
+  </div>
+
+  <!-- Install PWA Banner -->
+  <div id="install-banner" class="hidden">
+    <p>📱 加到主畫面可離線使用</p>
+    <button id="btn-install">安裝</button>
+    <button id="btn-dismiss-install">稍後</button>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
