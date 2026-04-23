@@ -25,6 +25,7 @@
     watchId: null,
     notifyTimers: [],
     deferredInstallPrompt: null,
+    appTitle: localStorage.getItem('okinawa_app_title') || '沖繩旅遊地圖',
     itinerary: loadItinerarySync(),
     darkMode: localStorage.getItem('darkMode') === 'true',
     mapPickMode: false,
@@ -33,6 +34,24 @@
   };
 
   // ==================== Data Persistence ====================
+
+  function processImportedData(data) {
+    let list = data;
+    if (!Array.isArray(data)) {
+      if (data.title) {
+        state.appTitle = data.title;
+        localStorage.setItem('okinawa_app_title', state.appTitle);
+        document.title = state.appTitle;
+        const titleEl = document.getElementById('app-title-display');
+        if (titleEl) titleEl.textContent = state.appTitle;
+      }
+      list = data.itinerary || data.days || data.spots || data;
+    }
+    if (!Array.isArray(list) || list.length === 0) {
+      throw new Error('無效的行程格式');
+    }
+    return list;
+  }
 
   // Synchronous load from localStorage (used at startup)
 
@@ -60,8 +79,8 @@
       const res = await fetch(GITHUB_ITINERARY_URL + cacheBuster, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) throw new Error('Invalid format');
-      state.itinerary = normalizeItinerary(data);
+      const list = processImportedData(data);
+      state.itinerary = normalizeItinerary(list);
       saveItinerary();
       return true;
     } catch (e) {
@@ -87,8 +106,8 @@
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) throw new Error('Invalid format');
-      state.itinerary = normalizeItinerary(data);
+      const list = processImportedData(data);
+      state.itinerary = normalizeItinerary(list);
       state.currentDay = 0;
       state.currentSpot = null;
       saveItinerary();
@@ -924,31 +943,64 @@
   }
 
   async function fetchWeatherFromAPI() {
-    // Check cache
-
-    try {
-      const cached = JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY) || '{}');
-      if (cached.data && cached.timestamp && (Date.now() - cached.timestamp < WEATHER_CACHE_TTL)) {
-        return cached.data;
-      }
-    } catch (e) { /* ignore */ }
-
     // Collect dates from itinerary
-
     const dates = state.itinerary.map(d => d.date).filter(Boolean);
     if (dates.length === 0) return null;
 
     const startDate = dates[0];
     const endDate = dates[dates.length - 1];
 
+    // Check cache
+    try {
+      const cached = JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY) || '{}');
+      if (cached.data && cached.timestamp && (Date.now() - cached.timestamp < WEATHER_CACHE_TTL)) {
+        // 確認快取內有包含我們需要的起迄日期
+        if (cached.data[startDate] && cached.data[endDate]) {
+          return cached.data;
+        }
+      }
+    } catch (e) { /* ignore */ }
+
     // Open-Meteo forecast API (free, no key needed, up to 16 days)
 
     const url = `https://api.open-meteo.com/v1/forecast?latitude=26.33&longitude=127.77&daily=weather_code,temperature_2m_max,temperature_2m_min,relative_humidity_2m_mean,wind_speed_10m_max,wind_direction_10m_dominant&start_date=${startDate}&end_date=${endDate}&timezone=Asia%2FTokyo`;
 
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
+      let res = await fetch(url);
+      let json = await res.json();
+
+      // 若行程日期超過 Open-Meteo 的 16 天預測極限，會回傳 error。此時改用「去年同一天」的歷史氣候資料當作參考
+      if (json.error) {
+        let sl = startDate;
+        let el = endDate;
+        let yearDiff = 0;
+        const sDate = new Date(startDate);
+        const eDate = new Date(endDate);
+
+        // 只有「未來」超過 16 天的日期，我們才需要往前推到「去年」拿歷史資料
+        if (sDate > new Date()) {
+          yearDiff = sDate.getFullYear() - new Date().getFullYear() + 1; // 回推到有完整資料的去年
+          sDate.setFullYear(sDate.getFullYear() - yearDiff);
+          eDate.setFullYear(eDate.getFullYear() - yearDiff);
+          sl = sDate.toISOString().split('T')[0];
+          el = eDate.toISOString().split('T')[0];
+        }
+
+        const historyUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=26.33&longitude=127.77&daily=weather_code,temperature_2m_max,temperature_2m_min,relative_humidity_2m_mean,wind_speed_10m_max,wind_direction_10m_dominant&start_date=${sl}&end_date=${el}&timezone=Asia%2FTokyo`;
+        
+        res = await fetch(historyUrl);
+        json = await res.json();
+        
+        if (json.error) return null;
+
+        // 將歷史資料的年份加回原本行程的年份，讓行程表可以正確對應
+        if (yearDiff > 0 && json.daily && json.daily.time) {
+          json.daily.time = json.daily.time.map(d => {
+            return `${parseInt(d.substring(0,4)) + yearDiff}${d.substring(4)}`;
+          });
+          json.isHistorical = true; // 標記這是歷史借用資料
+        }
+      }
 
       if (!json.daily || !json.daily.time) return null;
 
@@ -966,7 +1018,7 @@
         weatherMap[date] = {
           icon,
           temp: `${tMax}°C / ${tMin}°C`,
-          desc,
+          desc: json.isHistorical ? `(歷年參考) ${desc}` : desc,
           humidity: `${humidity}%`,
           wind: `${windDir} ${windSpeed}m/s`
         };
@@ -1029,11 +1081,17 @@
       const now = new Date();
       const firstDate = new Date(state.itinerary[0]?.date);
       const daysDiff = Math.ceil((firstDate - now) / 86400000);
-      const forecastNote = daysDiff > 16
-        ? `<div class="weather-note">📅 行程日期尚未進入預報範圍（約 ${daysDiff} 天後），天氣資料將在出發前 ~16 天內自動更新</div>`
-        : weatherMap
-          ? '<div class="weather-note">✅ 已從 Open-Meteo 取得即時預報</div>'
-          : '<div class="weather-note">⚠️ 無法取得天氣資料，顯示的是快取或預設值</div>';
+      
+      let forecastNote = '';
+      if (weatherMap && Object.values(weatherMap)[0]?.desc.includes('(歷年參考)')) {
+        forecastNote = `<div class="weather-note">📅 行程距離現在約 ${daysDiff} 天，尚未進入準確預報範圍。目前顯示為「歷年同期的歷史氣候平均資料」作為參考！</div>`;
+      } else if (daysDiff > 16) {
+        forecastNote = `<div class="weather-note">📅 行程日期尚未進入預報範圍（約 ${daysDiff} 天後），天氣資料將在出發前 ~16 天內自動更新</div>`;
+      } else if (weatherMap) {
+        forecastNote = '<div class="weather-note">✅ 已成功取得 Open-Meteo 最新天氣預報！</div>';
+      } else {
+        forecastNote = '<div class="weather-note" style="color:#d32f2f;">⚠️ 無法取得天氣資料，顯示的是快取或預設值</div>';
+      }
 
       container.innerHTML = forecastNote + state.itinerary.map(day => `
         <div class="weather-card">
@@ -1878,7 +1936,11 @@
 
   function exportItinerary() {
     try {
-      const json = JSON.stringify(state.itinerary, null, 2);
+      const exportData = {
+        title: state.appTitle,
+        itinerary: state.itinerary
+      };
+      const json = JSON.stringify(exportData, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1903,13 +1965,11 @@
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target.result);
-        if (!Array.isArray(data) || data.length === 0) {
-          alert('無效的行程格式：需要是陣列');
-          return;
-        }
-        if (!confirm(`即將載入 ${data.length} 天的行程，會覆蓋目前資料。確定嗎？`)) return;
+        const list = processImportedData(data);
+        
+        if (!confirm(`即將載入 ${list.length} 天的行程，會覆蓋目前資料。確定嗎？`)) return;
 
-        state.itinerary = normalizeItinerary(data);
+        state.itinerary = normalizeItinerary(list);
         state.currentDay = 0;
         state.currentSpot = null;
         saveItinerary();
@@ -2185,6 +2245,11 @@
 
   // ==================== App Init ====================
   async function init() {
+    // 優先設定 App Title
+    document.title = state.appTitle;
+    const titleEl = document.getElementById('app-title-display');
+    if (titleEl) titleEl.textContent = state.appTitle;
+
     applyDarkMode();
     initMap();
 
@@ -2283,12 +2348,15 @@
                 }
 
                 // 7. 匯入資料
-                if (!Array.isArray(data) || data.length === 0) {
-                  alert('JSON 檔案內容格式不正確');
+                let list;
+                try {
+                  list = processImportedData(data);
+                } catch(e) {
+                  alert(e.message);
                   return;
                 }
                 
-                state.itinerary = normalizeItinerary(data);
+                state.itinerary = normalizeItinerary(list);
                 state.currentDay = 0;
                 state.currentSpot = null;
                 saveItinerary();
