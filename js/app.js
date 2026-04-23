@@ -992,44 +992,35 @@
     return new Blob([uInt8Array], { type: contentType });
   }
 
-  async function uploadToGoogleDrive(dataUrl, spot, accessToken) {
+  async function uploadToImgur(dataUrl) {
     return new Promise(async (resolve, reject) => {
       try {
-        const blob = convertBase64ToBlob(dataUrl);
-        const metadata = {
-          name: `${spot.name}_${new Date().getTime()}.jpeg`,
-          mimeType: 'image/jpeg',
-        };
+        // 移除 Base64 的 'data:image/jpeg;base64,' 前綴
+        const base64Data = dataUrl.split(',')[1];
         
         const form = new FormData();
-        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        form.append('file', blob);
+        form.append('image', base64Data);
+        form.append('type', 'base64');
         
-        // 執行 Google Drive Multipart Upload (上傳檔案)
-        const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+        // 執行 Imgur 上傳
+        const uploadRes = await fetch('https://api.imgur.com/3/image', {
           method: 'POST',
-          headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+          headers: new Headers({ 
+            // 注意：這裡填入你的 Imgur Client ID
+            'Authorization': 'Client-ID YOUR_IMGUR_CLIENT_ID' 
+          }),
           body: form
         });
+        
         const fileData = await uploadRes.json();
         
-        if (fileData.error) throw new Error(fileData.error.message);
+        if (!fileData.success) throw new Error(fileData.data.error || '上傳失敗');
 
-        // 設定權限為公開讀取
-        await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions`, {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + accessToken,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ role: 'reader', type: 'anyone' })
-        });
-        
-        // 回傳照片的 Google Drive 雲端連結
+        // 回傳 Imgur 的圖片資料
         resolve({
-          id: fileData.id,
-          webViewLink: fileData.webViewLink,
-          previewUrl: `https://drive.google.com/uc?id=${fileData.id}`
+          id: fileData.data.id,
+          webViewLink: fileData.data.link, // 原始圖片連結
+          previewUrl: fileData.data.link    // Imgur 縮圖建議可改用 fileData.data.link 替換副檔名，這裡簡化直接用原圖
         });
       } catch (err) {
         reject(err);
@@ -1038,7 +1029,7 @@
   }
 
   function capturePhoto(spot) {
-    // 1. 動態建立選擇模式的 UI (避免 confirm 破壞使用者點擊授權信任)
+    // 1. 動態建立選擇模式的 UI
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
     
@@ -1047,7 +1038,7 @@
     dialog.innerHTML = `
       <h3 style="margin-top:0;">📸 選擇儲存方式</h3>
       <p style="font-size:14px;color:var(--text-secondary,#666);margin-bottom:20px;">你要將這張照片存在哪裡？</p>
-      <button id="btn-save-gdrive" class="btn-primary" style="width:100%;margin-bottom:10px;font-size:16px;">☁️ 上傳至 Google Drive (公開公開連結)</button>
+      <button id="btn-save-imgur" class="btn-primary" style="width:100%;margin-bottom:10px;font-size:16px;">☁️ 上傳至 Imgur (公開連結)</button>
       <button id="btn-save-local" class="btn-secondary" style="width:100%;margin-bottom:10px;font-size:16px;">📱 僅存在本機相簿</button>
       <button id="btn-save-cancel" style="width:100%;background:transparent;border:none;color:var(--text-secondary,#666);padding:10px;">取消</button>
     `;
@@ -1060,7 +1051,7 @@
     dialog.querySelector('#btn-save-cancel').onclick = closeOverlay;
 
     // 定義開啟相機/檔案選擇的共用邏輯
-    const proceedWithFilePicker = (useGDrive, accessToken = null) => {
+    const proceedWithFilePicker = (useImgur) => {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
@@ -1078,21 +1069,21 @@
             // 壓縮圖片
             const compressed = await compressImage(ev.target.result, 800, 0.7);
             
-            if (useGDrive && accessToken) {
+            if (useImgur) {
               btnList.forEach(btn => btn.textContent = '☁️ 上傳中...');
               // 上傳並取得雲端 URL
-              const driveFile = await uploadToGoogleDrive(compressed, spot, accessToken);
+              const imgurFile = await uploadToImgur(compressed);
               
               // 將照片連結加入行程資料的 JSON
               if (!spot.photos) spot.photos = [];
               spot.photos.push({
-                id: driveFile.id,
-                url: driveFile.webViewLink,
-                preview: driveFile.previewUrl,
+                id: imgurFile.id,
+                url: imgurFile.webViewLink,
+                preview: imgurFile.previewUrl,
                 date: new Date().toISOString()
               });
               saveItinerary();
-              alert('✅ 照片已上傳至 Google Drive！\n(將隨著行程 JSON 匯出與同步)');
+              alert('✅ 照片已上傳至 Imgur！\n(將隨著行程 JSON 匯出與同步)');
             } else {
               // 本機儲存
               savePhoto(spot.id, compressed);
@@ -1117,43 +1108,10 @@
       proceedWithFilePicker(false);
     };
 
-    // 點擊 Google Drive 儲存 (由點擊事件直接觸發，避免 Popup Blocker 擋住視窗)
-    dialog.querySelector('#btn-save-gdrive').onclick = async () => {
+    // 點擊 Imgur 儲存 
+    dialog.querySelector('#btn-save-imgur').onclick = () => {
       closeOverlay();
-      
-      // 確保 API 載入
-      if (!window.google) {
-        await Promise.all([
-          new Promise(res => {
-            const script = document.createElement('script');
-            script.src = 'https://apis.google.com/js/api.js';
-            script.onload = res;
-            document.body.appendChild(script);
-          }),
-          new Promise(res => {
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client';
-            script.onload = res;
-            document.body.appendChild(script);
-          })
-        ]);
-        await new Promise((res, rej) => window.gapi.load('client', { callback: res, onerror: rej }));
-        await window.gapi.client.init({ apiKey: 'AIzaSyDG2M2uSIXncvYFKu-86taPiv46SoIziCM' });
-      }
-
-      const tokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: '395992156922-r8tuo6a0f6nk3u395ulej55j26f7b1ce.apps.googleusercontent.com',
-        scope: 'https://www.googleapis.com/auth/drive.file',
-        callback: (response) => {
-          if (response.error !== undefined) {
-            alert('❌ Google 登入失敗：' + response.error);
-            return;
-          }
-          // 授權成功後，開啟相機/檔案選擇器
-          proceedWithFilePicker(true, response.access_token);
-        }
-      });
-      tokenClient.requestAccessToken({ prompt: '' });
+      proceedWithFilePicker(true);
     };
   }
 
