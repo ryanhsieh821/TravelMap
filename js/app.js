@@ -993,66 +993,95 @@
   }
 
   async function uploadToGoogleDrive(dataUrl, spot) {
-    return new Promise((resolve, reject) => {
-      // 確保 API 載入
-      if (!window.google) {
-        reject(new Error('Google API 尚未載入，請先連接網路或重新整理'));
-        return;
-      }
-      
-      const tokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: '395992156922-r8tuo6a0f6nk3u395ulej55j26f7b1ce.apps.googleusercontent.com',
-        scope: 'https://www.googleapis.com/auth/drive.file',
-        callback: async (response) => {
-          if (response.error !== undefined) {
-            reject(response);
-            return;
-          }
-          
-          try {
-            const accessToken = response.access_token;
-            const blob = convertBase64ToBlob(dataUrl);
-            const metadata = {
-              name: `${spot.name}_${new Date().getTime()}.jpeg`,
-              mimeType: 'image/jpeg',
-            };
-            
-            const form = new FormData();
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', blob);
-            
-            // 1. 上傳檔案 (Multipart upload)
-            const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
-              method: 'POST',
-              headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
-              body: form
-            });
-            const fileData = await uploadRes.json();
-            
-            if (fileData.error) throw new Error(fileData.error.message);
-
-            // 2. 開放權限給所有人讀取
-            await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions`, {
-              method: 'POST',
-              headers: {
-                'Authorization': 'Bearer ' + accessToken,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ role: 'reader', type: 'anyone' })
-            });
-            
-            // 回傳檔案 ID 及預覽/公開連結
-            resolve({
-              id: fileData.id,
-              webViewLink: fileData.webViewLink,
-              previewUrl: `https://drive.google.com/uc?id=${fileData.id}`
-            });
-          } catch (err) {
-            reject(err);
-          }
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 1. 如果尚未載入 Google API，自動載入
+        if (!window.gapi || !window.google) {
+          await Promise.all([
+            new Promise(res => {
+              if (window.gapi) return res();
+              const script = document.createElement('script');
+              script.src = 'https://apis.google.com/js/api.js';
+              script.onload = res;
+              document.body.appendChild(script);
+            }),
+            new Promise(res => {
+              if (window.google) return res();
+              const script = document.createElement('script');
+              script.src = 'https://accounts.google.com/gsi/client';
+              script.onload = res;
+              document.body.appendChild(script);
+            })
+          ]);
         }
-      });
-      tokenClient.requestAccessToken({ prompt: '' });
+
+        // 確保 gapi client 初始化完成以進行後續 API 請求
+        await new Promise((res, rej) => {
+          window.gapi.load('client', { callback: res, onerror: rej });
+        });
+        await window.gapi.client.init({
+          apiKey: 'AIzaSyDG2M2uSIXncvYFKu-86taPiv46SoIziCM',
+        });
+
+        // 2. 請求上傳照片到 Google Drive
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: '395992156922-r8tuo6a0f6nk3u395ulej55j26f7b1ce.apps.googleusercontent.com',
+          scope: 'https://www.googleapis.com/auth/drive.file',
+          callback: async (response) => {
+            if (response.error !== undefined) {
+              reject(new Error(response.error));
+              return;
+            }
+            
+            try {
+              const accessToken = response.access_token;
+              const blob = convertBase64ToBlob(dataUrl);
+              const metadata = {
+                name: `${spot.name}_${new Date().getTime()}.jpeg`,
+                mimeType: 'image/jpeg',
+              };
+              
+              const form = new FormData();
+              form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+              form.append('file', blob);
+              
+              // 3. 執行 Google Drive Multipart Upload (上傳檔案)
+              const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+                method: 'POST',
+                headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                body: form
+              });
+              const fileData = await uploadRes.json();
+              
+              if (fileData.error) throw new Error(fileData.error.message);
+
+              // 4. 設定權限為公開讀取
+              await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': 'Bearer ' + accessToken,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ role: 'reader', type: 'anyone' })
+              });
+              
+              // 回傳照片的 Google Drive 雲端連結
+              resolve({
+                id: fileData.id,
+                webViewLink: fileData.webViewLink,
+                previewUrl: `https://drive.google.com/uc?id=${fileData.id}`
+              });
+            } catch (err) {
+              reject(err);
+            }
+          }
+        });
+        
+        tokenClient.requestAccessToken({ prompt: '' });
+
+      } catch (e) {
+        reject(e);
+      }
     });
   }
 
