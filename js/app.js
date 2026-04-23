@@ -980,22 +980,128 @@
     localStorage.setItem('okinawa_photos', JSON.stringify(photos));
   }
 
+  function convertBase64ToBlob(base64) {
+    const parts = base64.split(';base64,');
+    const contentType = parts[0].split(':')[1];
+    const raw = window.atob(parts[1]);
+    const rawLength = raw.length;
+    const uInt8Array = new Uint8Array(rawLength);
+    for (let i = 0; i < rawLength; ++i) {
+      uInt8Array[i] = raw.charCodeAt(i);
+    }
+    return new Blob([uInt8Array], { type: contentType });
+  }
+
+  async function uploadToGoogleDrive(dataUrl, spot) {
+    return new Promise((resolve, reject) => {
+      // 確保 API 載入
+      if (!window.google) {
+        reject(new Error('Google API 尚未載入，請先連接網路或重新整理'));
+        return;
+      }
+      
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: '395992156922-r8tuo6a0f6nk3u395ulej55j26f7b1ce.apps.googleusercontent.com',
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: async (response) => {
+          if (response.error !== undefined) {
+            reject(response);
+            return;
+          }
+          
+          try {
+            const accessToken = response.access_token;
+            const blob = convertBase64ToBlob(dataUrl);
+            const metadata = {
+              name: `${spot.name}_${new Date().getTime()}.jpeg`,
+              mimeType: 'image/jpeg',
+            };
+            
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            form.append('file', blob);
+            
+            // 1. 上傳檔案 (Multipart upload)
+            const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+              method: 'POST',
+              headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+              body: form
+            });
+            const fileData = await uploadRes.json();
+            
+            if (fileData.error) throw new Error(fileData.error.message);
+
+            // 2. 開放權限給所有人讀取
+            await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions`, {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer ' + accessToken,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ role: 'reader', type: 'anyone' })
+            });
+            
+            // 回傳檔案 ID 及預覽/公開連結
+            resolve({
+              id: fileData.id,
+              webViewLink: fileData.webViewLink,
+              previewUrl: `https://drive.google.com/uc?id=${fileData.id}`
+            });
+          } catch (err) {
+            reject(err);
+          }
+        }
+      });
+      tokenClient.requestAccessToken({ prompt: '' });
+    });
+  }
+
   function capturePhoto(spot) {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.capture = 'environment';
-    input.addEventListener('change', (e) => {
+    input.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        // Compress to max 200KB
 
-        compressImage(ev.target.result, 800, 0.7).then(compressed => {
-          savePhoto(spot.id, compressed);
+      const btnList = document.querySelectorAll(`.btn-photo[data-spot-id="${spot.id}"]`);
+      btnList.forEach(btn => btn.textContent = '⏳ 處理中...');
+
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try {
+          // 壓縮圖片
+          const compressed = await compressImage(ev.target.result, 800, 0.7);
+          
+          if (confirm('是否將照片上傳至 Google Drive 並設定為公開連結，寫入行程 JSON 中？\n(按「取消」則僅存於本機相簿)')) {
+            btnList.forEach(btn => btn.textContent = '☁️ 上傳中...');
+            // 上傳並取得雲端 URL
+            const driveFile = await uploadToGoogleDrive(compressed, spot);
+            
+            // 將照片連結加入行程資料的 JSON
+            if (!spot.photos) spot.photos = [];
+            spot.photos.push({
+              id: driveFile.id,
+              url: driveFile.webViewLink,
+              preview: driveFile.previewUrl,
+              date: new Date().toISOString()
+            });
+            // 儲存更新後的 JSON
+            saveItinerary();
+            alert('✅ 照片已上傳至 Google Drive！\n(將隨著行程 JSON 匯出與同步)');
+          } else {
+            // 本機儲存
+            savePhoto(spot.id, compressed);
+            alert('✅ 已將照片暫存於本機相簿');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('❌ 上傳發生錯誤：\n' + (err.message || JSON.stringify(err)));
+        } finally {
+          btnList.forEach(btn => btn.textContent = '📸 拍照');
           renderPhotoGallery();
-        });
+        }
       };
       reader.readAsDataURL(file);
     });
@@ -1023,18 +1129,40 @@
     const container = document.getElementById('photo-gallery');
     const allSpots = state.itinerary.flatMap(d => d.spots);
 
-    container.innerHTML = allSpots
-      .filter(spot => photos[spot.id] && photos[spot.id].length > 0)
-      .map(spot => `
-        <div class="photo-spot-section">
-          <div class="photo-spot-title">📍 ${esc(spot.name)}</div>
-          <div class="photo-grid">
-            ${photos[spot.id].map(p =>
-              `<img src="${p.url}" alt="${spot.name}" loading="lazy">`
-            ).join('')}
+    const galleryHtml = allSpots
+      .map(spot => {
+        // 取得本機的 Base64 圖片
+        const localPhotos = photos[spot.id] || [];
+        // 取得存在行程 JSON (Google Drive) 的的圖片
+        const drivePhotos = spot.photos ? spot.photos.map(p => ({
+          url: p.preview || p.url, // 用 preview URL 顯示縮圖
+          link: p.url,             // 用 webViewLink 原圖開啟連結
+          isDrive: true
+        })) : [];
+
+        const allSpotPhotos = [...localPhotos, ...drivePhotos];
+        
+        if (allSpotPhotos.length === 0) return '';
+
+        return `
+          <div class="photo-spot-section">
+            <div class="photo-spot-title">📍 ${esc(spot.name)}</div>
+            <div class="photo-grid">
+              ${allSpotPhotos.map(p => 
+                p.isDrive 
+                  ? `<a href="${p.link}" target="_blank" title="在新分頁檢視 Drive 原圖">
+                       <img src="${p.url}" alt="${spot.name}" loading="lazy" style="border: 2px solid #5fa8d3;">
+                     </a>`
+                  : `<img src="${p.url}" alt="${spot.name}" loading="lazy">`
+              ).join('')}
+            </div>
           </div>
-        </div>
-      `).join('') || '<p style="color:var(--text-secondary);text-align:center;padding:40px 0;">還沒有照片，去景點拍一張吧！📸</p>';
+        `;
+      })
+      .filter(html => html !== '')
+      .join('');
+
+    container.innerHTML = galleryHtml || '<p style="color:var(--text-secondary);text-align:center;padding:40px 0;">還沒有照片，去景點拍一張吧！📸</p>';
   }
 
   // ==================== Dark Mode ====================
@@ -2035,7 +2163,7 @@
           // 3. 使用 Google Identity Services 取得 Access Token
           const tokenClient = window.google.accounts.oauth2.initTokenClient({
             client_id: '395992156922-r8tuo6a0f6nk3u395ulej55j26f7b1ce.apps.googleusercontent.com', // TODO: 請填入你的 OAuth 2.0 Client ID
-            scope: 'https://www.googleapis.com/auth/drive.readonly',
+            scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
             callback: async (tokenResponse) => {
               if (tokenResponse.error !== undefined) {
                 throw tokenResponse;
