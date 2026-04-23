@@ -1023,6 +1023,7 @@
           previewUrl: fileData.data.link    // Imgur 縮圖建議可改用 fileData.data.link 替換副檔名，這裡簡化直接用原圖
         });
       } catch (err) {
+        console.log(err)
         reject(err);
       }
     });
