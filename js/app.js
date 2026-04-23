@@ -270,6 +270,32 @@
 
     const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
 
+    // Day Header with Edit Button
+    const dayHeader = document.createElement('div');
+    dayHeader.style.cssText = 'padding: 12px; background: var(--bg-card); margin-bottom: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06);';
+    dayHeader.innerHTML = `
+      <div>
+        <div style="font-weight: bold; font-size: 16px; margin-bottom:4px; color: var(--text)">${esc(day.title)}</div>
+        <div style="font-size: 13px; color: var(--text-secondary);">${esc(day.date)}</div>
+      </div>
+      <button id="btn-edit-day" title="編輯日期與標題" style="background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 5px;">✏️</button>
+    `;
+    
+    dayHeader.querySelector('#btn-edit-day').addEventListener('click', () => {
+      const newTitle = prompt('請輸入這天的標題：', day.title);
+      if (newTitle === null) return;
+      const newDate = prompt('請輸入日期 (例如 2025-05-01)：', day.date);
+      if (newDate === null) return;
+      
+      day.title = newTitle.trim();
+      day.date = newDate.trim();
+      saveItinerary();
+      renderSpotList();
+      renderDayTabs(); // Tabs might need to update if we add date there in the future
+    });
+    
+    container.appendChild(dayHeader);
+
     day.spots.forEach((spot, i) => {
       // Spot card
 
@@ -980,140 +1006,26 @@
     localStorage.setItem('okinawa_photos', JSON.stringify(photos));
   }
 
-  function convertBase64ToBlob(base64) {
-    const parts = base64.split(';base64,');
-    const contentType = parts[0].split(':')[1];
-    const raw = window.atob(parts[1]);
-    const rawLength = raw.length;
-    const uInt8Array = new Uint8Array(rawLength);
-    for (let i = 0; i < rawLength; ++i) {
-      uInt8Array[i] = raw.charCodeAt(i);
-    }
-    return new Blob([uInt8Array], { type: contentType });
-  }
-
-  async function uploadToImgur(dataUrl) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // 移除 Base64 的 'data:image/jpeg;base64,' 前綴
-        const base64Data = dataUrl.split(',')[1];
-        
-        const form = new FormData();
-        form.append('image', base64Data);
-        form.append('type', 'base64');
-        
-        // 執行 Imgur 上傳
-        const uploadRes = await fetch('https://api.imgur.com/3/image', {
-          method: 'POST',
-          headers: new Headers({ 
-            // 注意：這裡填入你的 Imgur Client ID
-            'Authorization': 'Client-ID YOUR_IMGUR_CLIENT_ID' 
-          }),
-          body: form
-        });
-        
-        const fileData = await uploadRes.json();
-        
-        if (!fileData.success) throw new Error(fileData.data.error || '上傳失敗');
-
-        // 回傳 Imgur 的圖片資料
-        resolve({
-          id: fileData.data.id,
-          webViewLink: fileData.data.link, // 原始圖片連結
-          previewUrl: fileData.data.link    // Imgur 縮圖建議可改用 fileData.data.link 替換副檔名，這裡簡化直接用原圖
-        });
-      } catch (err) {
-        console.log(err)
-        reject(err);
-      }
-    });
-  }
-
   function capturePhoto(spot) {
-    // 1. 動態建立選擇模式的 UI
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
-    
-    const dialog = document.createElement('div');
-    dialog.style.cssText = 'background:var(--bg-card,#fff);padding:20px;border-radius:12px;width:90%;max-width:320px;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.2);';
-    dialog.innerHTML = `
-      <h3 style="margin-top:0;">📸 選擇儲存方式</h3>
-      <p style="font-size:14px;color:var(--text-secondary,#666);margin-bottom:20px;">你要將這張照片存在哪裡？</p>
-      <button id="btn-save-imgur" class="btn-primary" style="width:100%;margin-bottom:10px;font-size:16px;">☁️ 上傳至 Imgur (公開連結)</button>
-      <button id="btn-save-local" class="btn-secondary" style="width:100%;margin-bottom:10px;font-size:16px;">📱 僅存在本機相簿</button>
-      <button id="btn-save-cancel" style="width:100%;background:transparent;border:none;color:var(--text-secondary,#666);padding:10px;">取消</button>
-    `;
-    overlay.appendChild(dialog);
-    document.body.appendChild(overlay);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        // Compress to max 200KB
 
-    const closeOverlay = () => document.body.removeChild(overlay);
-
-    // 取消按鈕
-    dialog.querySelector('#btn-save-cancel').onclick = closeOverlay;
-
-    // 定義開啟相機/檔案選擇的共用邏輯
-    const proceedWithFilePicker = (useImgur) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.capture = 'environment';
-      input.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const btnList = document.querySelectorAll(`.btn-photo[data-spot-id="${spot.id}"]`);
-        btnList.forEach(btn => btn.textContent = '⏳ 處理中...');
-
-        const reader = new FileReader();
-        reader.onload = async (ev) => {
-          try {
-            // 壓縮圖片
-            const compressed = await compressImage(ev.target.result, 800, 0.7);
-            
-            if (useImgur) {
-              btnList.forEach(btn => btn.textContent = '☁️ 上傳中...');
-              // 上傳並取得雲端 URL
-              const imgurFile = await uploadToImgur(compressed);
-              
-              // 將照片連結加入行程資料的 JSON
-              if (!spot.photos) spot.photos = [];
-              spot.photos.push({
-                id: imgurFile.id,
-                url: imgurFile.webViewLink,
-                preview: imgurFile.previewUrl,
-                date: new Date().toISOString()
-              });
-              saveItinerary();
-              alert('✅ 照片已上傳至 Imgur！\n(將隨著行程 JSON 匯出與同步)');
-            } else {
-              // 本機儲存
-              savePhoto(spot.id, compressed);
-              alert('✅ 已將照片暫存於本機相簿');
-            }
-          } catch (err) {
-            console.error(err);
-            alert('❌ 上傳發生錯誤：\n' + (err.message || JSON.stringify(err)));
-          } finally {
-            btnList.forEach(btn => btn.textContent = '📸 拍照');
-            renderPhotoGallery();
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-      input.click();
-    };
-
-    // 點擊本機儲存
-    dialog.querySelector('#btn-save-local').onclick = () => {
-      closeOverlay();
-      proceedWithFilePicker(false);
-    };
-
-    // 點擊 Imgur 儲存 
-    dialog.querySelector('#btn-save-imgur').onclick = () => {
-      closeOverlay();
-      proceedWithFilePicker(true);
-    };
+        compressImage(ev.target.result, 800, 0.7).then(compressed => {
+          savePhoto(spot.id, compressed);
+          renderPhotoGallery();
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+    input.click();
   }
 
   function compressImage(dataUrl, maxWidth, quality) {
@@ -1137,40 +1049,18 @@
     const container = document.getElementById('photo-gallery');
     const allSpots = state.itinerary.flatMap(d => d.spots);
 
-    const galleryHtml = allSpots
-      .map(spot => {
-        // 取得本機的 Base64 圖片
-        const localPhotos = photos[spot.id] || [];
-        // 取得存在行程 JSON (Google Drive) 的的圖片
-        const drivePhotos = spot.photos ? spot.photos.map(p => ({
-          url: p.preview || p.url, // 用 preview URL 顯示縮圖
-          link: p.url,             // 用 webViewLink 原圖開啟連結
-          isDrive: true
-        })) : [];
-
-        const allSpotPhotos = [...localPhotos, ...drivePhotos];
-        
-        if (allSpotPhotos.length === 0) return '';
-
-        return `
-          <div class="photo-spot-section">
-            <div class="photo-spot-title">📍 ${esc(spot.name)}</div>
-            <div class="photo-grid">
-              ${allSpotPhotos.map(p => 
-                p.isDrive 
-                  ? `<a href="${p.link}" target="_blank" title="在新分頁檢視 Drive 原圖">
-                       <img src="${p.url}" alt="${spot.name}" loading="lazy" style="border: 2px solid #5fa8d3;">
-                     </a>`
-                  : `<img src="${p.url}" alt="${spot.name}" loading="lazy">`
-              ).join('')}
-            </div>
+    container.innerHTML = allSpots
+      .filter(spot => photos[spot.id] && photos[spot.id].length > 0)
+      .map(spot => `
+        <div class="photo-spot-section">
+          <div class="photo-spot-title">📍 ${esc(spot.name)}</div>
+          <div class="photo-grid">
+            ${photos[spot.id].map(p =>
+              `<img src="${p.url}" alt="${spot.name}" loading="lazy">`
+            ).join('')}
           </div>
-        `;
-      })
-      .filter(html => html !== '')
-      .join('');
-
-    container.innerHTML = galleryHtml || '<p style="color:var(--text-secondary);text-align:center;padding:40px 0;">還沒有照片，去景點拍一張吧！📸</p>';
+        </div>
+      `).join('') || '<p style="color:var(--text-secondary);text-align:center;padding:40px 0;">還沒有照片，去景點拍一張吧！📸</p>';
   }
 
   // ==================== Dark Mode ====================
@@ -2158,85 +2048,83 @@
             ]);
           }
 
-          // 2. 初始化 gapi client 與 picker
+          // 2. 初始化 gapi client (只需 API Key)
           await new Promise((resolve, reject) => {
-            window.gapi.load('client:picker', { callback: resolve, onerror: reject });
+            window.gapi.load('client', { callback: resolve, onerror: reject });
           });
-          const API_KEY = 'AIzaSyDG2M2uSIXncvYFKu-86taPiv46SoIziCM';
           await window.gapi.client.init({
-            apiKey: API_KEY, // TODO: 請填入你的 Google API Key
+            apiKey: 'AIzaSyDG2M2uSIXncvYFKu-86taPiv46SoIziCM', // TODO: 請填入你的 Google API Key
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
           });
 
           // 3. 使用 Google Identity Services 取得 Access Token
           const tokenClient = window.google.accounts.oauth2.initTokenClient({
             client_id: '395992156922-r8tuo6a0f6nk3u395ulej55j26f7b1ce.apps.googleusercontent.com', // TODO: 請填入你的 OAuth 2.0 Client ID
-            scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
+            scope: 'https://www.googleapis.com/auth/drive.readonly',
             callback: async (tokenResponse) => {
               if (tokenResponse.error !== undefined) {
                 throw tokenResponse;
               }
 
               try {
-                // 4. 建立並顯示 Google Picker UI
-                const view = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS);
-                view.setIncludeFolders(true); // 允許選取資料夾內的檔案
+                // 4. 取得 token 後，列出 JSON 檔案
+                const response = await window.gapi.client.drive.files.list({
+                  q: "mimeType='application/json' and trashed=false",
+                  pageSize: 20,
+                  fields: 'files(id, name)'
+                });
                 
-                const picker = new window.google.picker.PickerBuilder()
-                  .addView(view)
-                  .setOAuthToken(tokenResponse.access_token)
-                  .setDeveloperKey(API_KEY)
-                  .setCallback(async (data) => {
-                    // 等待使用者選取檔案
-                    if (data[window.google.picker.Response.ACTION] === window.google.picker.Action.PICKED) {
-                      const doc = data[window.google.picker.Response.DOCUMENTS][0];
-                      const fileId = doc[window.google.picker.Document.ID];
-                      
-                      try {
-                        // 5. 下載選取檔案的內容
-                        const fileRes = await window.gapi.client.drive.files.get({
-                          fileId: fileId,
-                          alt: 'media'
-                        });
-                        
-                        let docData;
-                        try {
-                          docData = typeof fileRes.body === 'string' ? JSON.parse(fileRes.body) : fileRes.result;
-                        } catch (e) {
-                          alert('檔案格式錯誤，請確認這是正確的行程 JSON 檔案');
-                          return;
-                        }
+                const files = response.result.files;
+                if (!files || files.length === 0) {
+                  alert('Google Drive 中沒有可用的 JSON 檔案');
+                  return;
+                }
 
-                        // 6. 匯入資料
-                        if (!Array.isArray(docData) || docData.length === 0) {
-                          alert('JSON 檔案內容格式不正確');
-                          return;
-                        }
-                        
-                        state.itinerary = normalizeItinerary(docData);
-                        state.currentDay = 0;
-                        state.currentSpot = null;
-                        saveItinerary();
-                        renderDayTabs();
-                        renderSpotList();
-                        showDayOnMap();
-                        scheduleNotifications && scheduleNotifications();
-                        closeModal && closeModal('settings-modal');
-                        alert('✅ 已成功從 Google Drive 載入！');
+                // 5. 選擇檔案
+                const fileNameList = files.map((f, i) => `${i + 1}. ${f.name}`).join('\n');
+                const idx = prompt(`選擇要載入的檔案：\n${fileNameList}\n請輸入編號 (1-${files.length})`);
+                if (!idx) return;
+                
+                const file = files[parseInt(idx, 10) - 1];
+                if (!file) {
+                  alert('無效的選擇');
+                  return;
+                }
 
-                      } catch (err) {
-                        console.error(err);
-                        alert('下載檔案時發生錯誤：' + (err.message || JSON.stringify(err)));
-                      }
-                    }
-                  })
-                  .build();
-                  
-                picker.setVisible(true);
+                // 6. 下載檔案內容
+                const fileRes = await window.gapi.client.drive.files.get({
+                  fileId: file.id,
+                  alt: 'media'
+                });
+                
+                let data;
+                try {
+                  data = typeof fileRes.body === 'string' ? JSON.parse(fileRes.body) : fileRes.result;
+                } catch (e) {
+                  alert('檔案格式錯誤，請確認是正確的行程 JSON 檔案');
+                  return;
+                }
+
+                // 7. 匯入資料
+                if (!Array.isArray(data) || data.length === 0) {
+                  alert('JSON 檔案內容格式不正確');
+                  return;
+                }
+                
+                state.itinerary = normalizeItinerary(data);
+                state.currentDay = 0;
+                state.currentSpot = null;
+                saveItinerary();
+                renderDayTabs();
+                renderSpotList();
+                showDayOnMap();
+                scheduleNotifications && scheduleNotifications();
+                closeModal && closeModal('settings-modal');
+                alert('✅ 已成功從 Google Drive 載入行程！');
 
               } catch (err) {
                 console.error(err);
-                alert('開啟檔案選擇器發生錯誤：' + (err.message || JSON.stringify(err)));
+                alert('取得檔案時發生錯誤：' + (err.message || JSON.stringify(err)));
               }
             }
           });
