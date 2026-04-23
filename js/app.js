@@ -2014,8 +2014,8 @@
         // 2. 初始化 Google API client
         window.gapi.load('client:auth2', async () => {
           await window.gapi.client.init({
-            apiKey: 'YOUR_API_KEY', // TODO: 請填入你的 Google API Key
-            clientId: 'YOUR_CLIENT_ID', // TODO: 請填入你的 OAuth 2.0 Client ID
+            apiKey: 'AIzaSyDG2M2uSIXncvYFKu-86taPiv46SoIziCM', // TODO: 請填入你的 Google API Key
+            clientId: '395992156922-r8tuo6a0f6nk3u395ulej55j26f7b1ce.apps.googleusercontent.com', // TODO: 請填入你的 OAuth 2.0 Client ID
             discoveryDocs: [
               'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
             ],
