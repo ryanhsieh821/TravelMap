@@ -619,7 +619,8 @@
   function selectSpot(spot) {
     state.currentSpot = spot.id;
     renderSpotList();
-    state.map.flyTo([spot.lat, spot.lng], 15, { duration: 1 });
+    state.map.panTo({ lat: spot.lat, lng: spot.lng });
+    state.map.setZoom(15);
   }
 
   // ==================== Navigation (Route Drawing) ====================
@@ -675,7 +676,7 @@
 
     if(AdvancedMarkerElement) {
       const info = new window.google.maps.InfoWindow({
-        content: <div style="text-align:center;font-weight:bold;"> km<br>約  分鐘</div>,
+        content: `<div style="text-align:center;font-weight:bold;">${dist.toFixed(1)} km<br>約 ${estTime} 分鐘</div>`,
         position: { lat: (from[0] + to[0]) / 2, lng: (from[1] + to[1]) / 2 }
       });
       info.open(state.map);
@@ -740,16 +741,15 @@
       return;
     }
 
-    state.map.flyTo([spot.lat, spot.lng], 16, { duration: 0.8 });
+    state.map.panTo({ lat: spot.lat, lng: spot.lng });
+    state.map.setZoom(16);
 
     spot.nearby.forEach(place => {
       const isConvenience = place.type === 'convenience';
-      const icon = createIcon(
-        isConvenience ? 'marker-convenience' : 'marker-food',
-        isConvenience ? '🏪' : '🍴'
-      );
+      const className = isConvenience ? 'marker-convenience' : 'marker-food';
+      const label = isConvenience ? '🏪' : '🍴';
 
-      const marker = addCustomMarker(place.lat, place.lng, className, "去", state.nearbyLayer, `
+      const marker = addCustomMarker(place.lat, place.lng, className, label, state.nearbyLayer, `
         <div class="popup-title">${esc(place.name)}</div>
         ${place.cuisine ? `<div class="popup-detail">${esc(place.cuisine)}</div>` : ''}
         ${place.price ? `<div class="popup-price">${esc(place.price)}</div>` : ''}
@@ -1938,14 +1938,14 @@
     closeModal('spot-editor-modal');
     document.getElementById('map-pick-overlay').classList.remove('hidden');
     document.getElementById('fab-add-spot').classList.add('hidden');
-    state.map.getContainer().style.cursor = 'crosshair';
+    document.getElementById('map').style.cursor = 'crosshair';
     window.google.maps.event.addListenerOnce(state.map, 'click', (e) => onMapPick({ latlng: { lat: e.latLng.lat(), lng: e.latLng.lng() } }));
   }
 
   function onMapPick(e) {
     if(AdvancedMarkerElement) {
       const info = new window.google.maps.InfoWindow({
-        content: '<div style=""text-align:center;""><p>📍選擇此座標？</p><button id=""btn-confirm-pick"" class=""btn-primary btn-sm"" style=""margin-top:4px;"">確定</button></div>',
+        content: '<div style="text-align:center;"><p>📍選擇此座標？</p><button id="btn-confirm-pick" class="btn-primary btn-sm" style="margin-top:4px;">確定</button></div>',
         position: { lat: e.latlng.lat, lng: e.latlng.lng }
       });
       info.open(state.map);
@@ -1977,7 +1977,7 @@
     state.mapPickMode = false;
     document.getElementById('map-pick-overlay').classList.add('hidden');
     document.getElementById('fab-add-spot').classList.remove('hidden');
-    state.map.getContainer().style.cursor = '';
+    document.getElementById('map').style.cursor = '';
   }
 
   // ==================== Import / Export / Reset ====================
