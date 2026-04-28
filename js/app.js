@@ -202,33 +202,64 @@
 
   // ==================== Map Init ====================
 
-  function initMap() {
-    state.map = L.map('map', {
-      center: APP_DATA.center,
-      zoom: APP_DATA.defaultZoom,
-      zoomControl: true,
-      attributionControl: false
-    });
+  let Map, AdvancedMarkerElement, LatLngBounds, Polyline;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(state.map);
+  async function initMap() {
+    state.map = null;
+    state.routeLayer = [];
+    state.markerLayer = [];
+    state.nearbyLayer = [];
+    state.positionMarker = null;
 
-    state.routeLayer = L.layerGroup().addTo(state.map);
-    state.markerLayer = L.layerGroup().addTo(state.map);
-    state.nearbyLayer = L.layerGroup().addTo(state.map);
+    try {
+      Map = (await window.google.maps.importLibrary("maps")).Map;
+      AdvancedMarkerElement = (await window.google.maps.importLibrary("marker")).AdvancedMarkerElement;
+      LatLngBounds = window.google.maps.LatLngBounds;
+      Polyline = window.google.maps.Polyline;
+
+      state.map = new Map(document.getElementById('map'), {
+        center: APP_DATA.center,
+        zoom: APP_DATA.defaultZoom,
+        mapId: 'DEMO_MAP_ID', // required for AdvancedMarkers
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false
+      });
+      // Force initial render when maps load
+      showDayOnMap();
+    } catch(e) {
+      console.error("Google Maps failed to load", e);
+    }
   }
 
-  // ==================== Custom Markers ====================
+  function clearGoogleLayer(arr) {
+    if (arr) {
+      arr.forEach(m => m.setMap(null));
+      arr.length = 0;
+    }
+  }
 
-  function createIcon(className, label) {
-    return L.divIcon({
-      className: '',
-      html: `<div class="custom-marker ${className}">${label}</div>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
+  function addCustomMarker(lat, lng, className, label, layerArray, popupHtml) {
+    if (!AdvancedMarkerElement || !state.map) return null;
+    
+    const el = document.createElement('div');
+    el.className = 'custom-marker ' + className;
+    el.textContent = label;
+
+    const marker = new AdvancedMarkerElement({
+      position: { lat: parseFloat(lat), lng: parseFloat(lng) },
+      content: el,
+      map: state.map
     });
+
+    if (popupHtml) {
+      const info = new window.google.maps.InfoWindow({ content: popupHtml });
+      // Remove tight click listener memory leak
+      marker.addListener('click', () => info.open(state.map, marker));
+    }
+
+    if (layerArray) layerArray.push(marker);
+    return marker;
   }
 
   // ==================== Sidebar Rendering ====================
@@ -522,9 +553,9 @@
   // ==================== Map Display ====================
 
   function showDayOnMap() {
-    state.markerLayer.clearLayers();
-    state.routeLayer.clearLayers();
-    state.nearbyLayer.clearLayers();
+    clearGoogleLayer(state.markerLayer);
+    clearGoogleLayer(state.routeLayer);
+    clearGoogleLayer(state.nearbyLayer);
     const day = state.itinerary[state.currentDay];
     if (!day) return;
 
@@ -546,17 +577,13 @@
         photoHtml = `<div style="margin-top:8px;text-align:center;"><img src="${allSpotPhotos[allSpotPhotos.length - 1].url}" style="width:100%; max-height:120px; object-fit:cover; border-radius:4px;"></div>`;
       }
 
-      const marker = L.marker([spot.lat, spot.lng], {
-        icon: createIcon('marker-spot', i + 1)
-      }).addTo(state.markerLayer);
-
-      marker.bindPopup(`
+      const marker = addCustomMarker(spot.lat, spot.lng, "marker-spot", i + 1, state.markerLayer, `
         <div class="popup-title">${esc(spot.name)}</div>
         <div class="popup-detail">${esc(spot.time)} · ${spot.duration}分鐘</div>
         ${photoHtml}
       `);
 
-      bounds.push([spot.lat, spot.lng]);
+      bounds.push({lat: spot.lat, lng: spot.lng});
     });
 
     // Draw connecting lines between spots
@@ -581,7 +608,11 @@
     }
 
     if (bounds.length > 0) {
-      state.map.fitBounds(bounds, { padding: [50, 50] });
+      if(LatLngBounds){
+        const b = new LatLngBounds();
+        bounds.forEach(pt => b.extend(pt));
+        state.map.fitBounds(b);
+      }
     }
   }
 
@@ -594,7 +625,7 @@
   // ==================== Navigation (Route Drawing) ====================
 
   function navigateToSpot(spot) {
-    state.routeLayer.clearLayers();
+    clearGoogleLayer(state.routeLayer);
     state.currentSpot = spot.id;
     renderSpotList();
 
@@ -609,7 +640,7 @@
   }
 
   function drawRoute(fromPos, toSpot) {
-    state.routeLayer.clearLayers();
+    clearGoogleLayer(state.routeLayer);
 
     const from = [fromPos.lat, fromPos.lng];
     const to = [toSpot.lat, toSpot.lng];
@@ -644,15 +675,24 @@
     const estTime = Math.ceil(dist / 40 * 60); // avg 40km/h
 
 
-    L.popup()
-      .setLatLng([(from[0] + to[0]) / 2, (from[1] + to[1]) / 2])
-      .setContent(`
-        <div class="popup-title">📏 距離 ${dist.toFixed(1)} km</div>
-        <div class="popup-detail">🚗 預估 ${estTime} 分鐘 (平均時速 40km)</div>
-      `)
-      .openOn(state.map);
+    if(AdvancedMarkerElement) {
+      const info = new window.google.maps.InfoWindow({
+        content: '<div style="text-align:center;"><p>📍 選擇此座標？</p><button id="btn-confirm-pick" class="btn-primary btn-sm" style="margin-top:4px;">確定</button></div>'
+      });
+      clearGoogleLayer(state.routeLayer);
+      const m = addCustomMarker(e.latlng.lat, e.latlng.lng, "marker-spot", "?", state.routeLayer, null);
+      if(m) info.open(state.map, m);
+      
+      window.google.maps.event.addListenerOnce(info, 'domready', () => {
+        document.getElementById('btn-confirm-pick').addEventListener('click', () => {
+          document.getElementById('edit-spot-lat').value = e.latlng.lat.toFixed(4);
+          document.getElementById('edit-spot-lng').value = e.latlng.lng.toFixed(4);
+          cancelMapPick();
+        });
+      });
+    }
 
-    state.map.fitBounds(polyline.getBounds(), { padding: [60, 60] });
+    if(LatLngBounds){ const b = new LatLngBounds(); b.extend({lat: from[0], lng: from[1]}); b.extend({lat: to[0], lng: to[1]}); state.map.fitBounds(b); }
   }
 
   // ==================== Geolocation ====================
@@ -696,7 +736,7 @@
   function updatePositionMarker() {
     if (!state.currentPosition) return;
     if (state.positionMarker) {
-      state.positionMarker.setLatLng([state.currentPosition.lat, state.currentPosition.lng]);
+      state.positionMarker.position = {lat: state.currentPosition.lat, lng: state.currentPosition.lng};
     } else {
       state.positionMarker = L.marker(
         [state.currentPosition.lat, state.currentPosition.lng],
@@ -708,7 +748,7 @@
   // ==================== Nearby Food ====================
 
   function showNearbyFood(spot) {
-    state.nearbyLayer.clearLayers();
+    clearGoogleLayer(state.nearbyLayer);
     if (!spot.nearby || spot.nearby.length === 0) {
       alert('此景點附近暫無美食資料');
       return;
@@ -723,10 +763,7 @@
         isConvenience ? '🏪' : '🍴'
       );
 
-      const marker = L.marker([place.lat, place.lng], { icon })
-        .addTo(state.nearbyLayer);
-
-      marker.bindPopup(`
+      const marker = addCustomMarker(place.lat, place.lng, className, "去", state.nearbyLayer, `
         <div class="popup-title">${esc(place.name)}</div>
         ${place.cuisine ? `<div class="popup-detail">${esc(place.cuisine)}</div>` : ''}
         ${place.price ? `<div class="popup-price">${esc(place.price)}</div>` : ''}
@@ -1916,7 +1953,7 @@
     document.getElementById('map-pick-overlay').classList.remove('hidden');
     document.getElementById('fab-add-spot').classList.add('hidden');
     state.map.getContainer().style.cursor = 'crosshair';
-    state.map.once('click', onMapPick);
+    window.google.maps.event.addListenerOnce(state.map, 'click', (e) => onMapPick({ latlng: { lat: e.latLng.lat(), lng: e.latLng.lng() } }));
   }
 
   function onMapPick(e) {
@@ -1927,7 +1964,7 @@
   }
 
   function cancelMapPick() {
-    state.map.off('click', onMapPick);
+    window.google.maps.event.clearListeners(state.map, 'click');
     endMapPick();
     openModal('spot-editor-modal');
   }
