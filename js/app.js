@@ -1751,7 +1751,13 @@
   function openSpotEditor(existingSpot) {
     const form = document.getElementById('spot-editor-form');
     const title = document.getElementById('spot-editor-title');
-    document.getElementById('edit-spot-search').value = '';
+    
+    // Clear the search field (handle both standard input and the new PlaceAutocompleteElement)
+    const searchEl = document.getElementById('edit-spot-search');
+    if (searchEl) {
+      if (searchEl.inputValue !== undefined) searchEl.inputValue = '';
+      else searchEl.value = '';
+    }
 
     if (existingSpot) {
       title.textContent = '✏️ 編輯景點';
@@ -2005,14 +2011,13 @@
 
   let placesAutocompleteInitialized = false;
 
-  function initGooglePlaces() {
+  async function initGooglePlaces() {
     const input = document.getElementById('edit-spot-search');
     if (!input) return;
 
-    // Check if Google Maps is loaded
-    if (!window.google || !window.google.maps || !window.google.maps.places) {
+    if (!window.google || !window.google.maps) {
       if (!placesAutocompleteInitialized) {
-        setTimeout(initGooglePlaces, 500); // retry later
+        setTimeout(initGooglePlaces, 500);
       }
       return;
     }
@@ -2020,37 +2025,40 @@
     if (placesAutocompleteInitialized) return;
     placesAutocompleteInitialized = true;
 
-    const autocomplete = new window.google.maps.places.Autocomplete(input, {
-      fields: ['geometry', 'name'],
-    });
-
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
+    try {
+      const { PlaceAutocompleteElement } = await window.google.maps.importLibrary('places');
+      const autocompleteElem = new PlaceAutocompleteElement();
+      autocompleteElem.id = 'edit-spot-search';
+      autocompleteElem.style.width = '100%';
+      autocompleteElem.style.boxSizing = 'border-box';
       
-      if (!place.geometry || !place.geometry.location) {
-        alert('找不到該地標的位置資訊');
-        return;
-      }
+      input.parentNode.replaceChild(autocompleteElem, input);
 
-      // fill inputs
-      const lat = place.geometry.location.lat().toFixed(6);
-      const lng = place.geometry.location.lng().toFixed(6);
-      
-      document.getElementById('edit-spot-lat').value = lat;
-      document.getElementById('edit-spot-lng').value = lng;
-      
-      const nameInput = document.getElementById('edit-spot-name');
-      if (!nameInput.value || nameInput.value.trim() === '') {
-        nameInput.value = place.name;
-      }
-    });
+      autocompleteElem.addEventListener('gmp-placeselect', async (e) => {
+        const place = e.place;
+        if (!place) return;
 
-    // Prevent submitting the whole form when pressing enter on the search input
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-      }
-    });
+        await place.fetchFields({ fields: ['location', 'displayName'] });
+
+        if (!place.location) {
+          alert('找不到該地標的位置資訊');
+          return;
+        }
+
+        const lat = place.location.lat().toFixed(6);
+        const lng = place.location.lng().toFixed(6);
+
+        document.getElementById('edit-spot-lat').value = lat;
+        document.getElementById('edit-spot-lng').value = lng;
+
+        const nameInput = document.getElementById('edit-spot-name');
+        if (!nameInput.value || nameInput.value.trim() === '') {
+          nameInput.value = place.displayName;
+        }
+      });
+    } catch (err) {
+      console.warn('Google Places Init Error:', err);
+    }
   }
 
   // ==================== Init Itinerary Editor ====================
