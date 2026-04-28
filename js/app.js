@@ -593,16 +593,16 @@
         const from = day.spots[i];
         const to = day.spots[i + 1];
         const transport = from.transportToNext;
-        if (transport) {
-          L.polyline(
-            [[from.lat, from.lng], [to.lat, to.lng]],
-            {
-              color: transport.color || '#999',
-              weight: 3,
-              opacity: 0.4,
-              dashArray: transport.mode === 'walk' ? '8, 8' : null
-            }
-          ).addTo(state.markerLayer);
+        if (transport && Polyline) {
+          const polyline = new Polyline({
+            path: [{lat: from.lat, lng: from.lng}, {lat: to.lat, lng: to.lng}],
+            geodesic: true,
+            strokeColor: transport.color || '#999',
+            strokeOpacity: 0.4,
+            strokeWeight: 3
+          });
+          polyline.setMap(state.map);
+          state.markerLayer.push(polyline);
         }
       }
     }
@@ -646,25 +646,23 @@
     const to = [toSpot.lat, toSpot.lng];
 
     // Draw polyline
-
-    const polyline = L.polyline([from, to], {
-      color: '#e94560',
-      weight: 4,
-      opacity: 0.8,
-      dashArray: '12, 8'
-    }).addTo(state.routeLayer);
+    let polyline;
+    if (Polyline) {
+      polyline = new Polyline({
+        path: [{lat: from[0], lng: from[1]}, {lat: to[0], lng: to[1]}],
+        geodesic: true, strokeColor: '#e94560', strokeOpacity: 0.8, strokeWeight: 4
+      });
+      polyline.setMap(state.map);
+      state.routeLayer.push(polyline);
+    }
 
     // Current position marker
 
-    L.marker(from, {
-      icon: createIcon('marker-current', '📍')
-    }).addTo(state.routeLayer).bindPopup('目前位置');
+    addCustomMarker(from[0], from[1], 'marker-current', '📍', state.routeLayer, '目前位置');
 
     // Destination marker
 
-    L.marker(to, {
-      icon: createIcon('marker-spot', '🏁')
-    }).addTo(state.routeLayer).bindPopup(`
+    addCustomMarker(to[0], to[1], 'marker-spot', '🏁', state.routeLayer, `
       <div class="popup-title">${esc(toSpot.name)}</div>
       <div class="popup-detail">${esc(toSpot.description)}</div>
     `);
@@ -738,10 +736,7 @@
     if (state.positionMarker) {
       state.positionMarker.position = {lat: state.currentPosition.lat, lng: state.currentPosition.lng};
     } else {
-      state.positionMarker = L.marker(
-        [state.currentPosition.lat, state.currentPosition.lng],
-        { icon: createIcon('marker-current', '📍') }
-      ).addTo(state.map).bindPopup('目前位置');
+      state.positionMarker = addCustomMarker(state.currentPosition.lat, state.currentPosition.lng, 'marker-current', '📍', null, '目前位置');
     }
   }
 
