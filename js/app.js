@@ -212,8 +212,8 @@
     state.positionMarker = null;
 
     try {
-      Map = (await window.google.maps.importLibrary("maps")).Map;
-      AdvancedMarkerElement = (await window.google.maps.importLibrary("marker")).AdvancedMarkerElement;
+      Map = window.google.maps.Map;
+      AdvancedMarkerElement = window.google.maps.marker.AdvancedMarkerElement;
       LatLngBounds = window.google.maps.LatLngBounds;
       Polyline = window.google.maps.Polyline;
 
@@ -2067,7 +2067,7 @@
     placesAutocompleteInitialized = true;
 
     try {
-      const { PlaceAutocompleteElement } = await window.google.maps.importLibrary('places');
+      const PlaceAutocompleteElement = window.google.maps.places.PlaceAutocompleteElement;
       const autocompleteElem = new PlaceAutocompleteElement();
       autocompleteElem.id = 'edit-spot-search';
       autocompleteElem.style.width = '100%';
