@@ -212,15 +212,14 @@
     state.positionMarker = null;
 
     try {
-      Map = (await google.maps.importLibrary("maps")).Map;
-      AdvancedMarkerElement = (await google.maps.importLibrary("marker")).AdvancedMarkerElement;
+      Map = window.google.maps.Map;
+      AdvancedMarkerElement = window.google.maps.Marker;
       LatLngBounds = window.google.maps.LatLngBounds;
       Polyline = window.google.maps.Polyline;
 
       state.map = new Map(document.getElementById('map'), {
         center: { lat: APP_DATA.center[0], lng: APP_DATA.center[1] },
         zoom: APP_DATA.defaultZoom,
-        mapId: 'DEMO_MAP_ID', // required for AdvancedMarkers
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false
@@ -241,21 +240,21 @@
 
   function addCustomMarker(lat, lng, className, label, layerArray, popupHtml) {
     if (!AdvancedMarkerElement || !state.map) return null;
-    
-    const el = document.createElement('div');
-    el.className = 'custom-marker ' + className;
-    el.textContent = label;
 
     const marker = new AdvancedMarkerElement({
       position: { lat: parseFloat(lat), lng: parseFloat(lng) },
-      content: el,
+      label: {
+        text: String(label),
+        color: '#ffffff',
+        fontSize: '16px',
+        fontWeight: '700'
+      },
       map: state.map
     });
 
     if (popupHtml) {
       const info = new window.google.maps.InfoWindow({ content: popupHtml });
-      // Remove tight click listener memory leak
-      marker.addListener('gmp-click', () => info.open(state.map, marker));
+      marker.addListener('click', () => info.open(state.map, marker));
     }
 
     if (layerArray) layerArray.push(marker);
@@ -726,7 +725,7 @@
   function updatePositionMarker() {
     if (!state.currentPosition) return;
     if (state.positionMarker) {
-      state.positionMarker.position = {lat: state.currentPosition.lat, lng: state.currentPosition.lng};
+      state.positionMarker.setPosition({lat: state.currentPosition.lat, lng: state.currentPosition.lng});
     } else {
       state.positionMarker = addCustomMarker(state.currentPosition.lat, state.currentPosition.lng, 'marker-current', '📍', null, '目前位置');
     }
@@ -2067,34 +2066,27 @@
     placesAutocompleteInitialized = true;
 
     try {
-      const { PlaceAutocompleteElement } = await google.maps.importLibrary('places');
-      const autocompleteElem = new PlaceAutocompleteElement();
-      autocompleteElem.id = 'edit-spot-search';
-      autocompleteElem.style.width = '100%';
-      autocompleteElem.style.boxSizing = 'border-box';
-      
-      input.parentNode.replaceChild(autocompleteElem, input);
+      const autocomplete = new window.google.maps.places.Autocomplete(input, {
+        fields: ['geometry', 'name'],
+        types: ['establishment', 'geocode']
+      });
 
-      autocompleteElem.addEventListener('gmp-placeselect', async (e) => {
-        const place = e.place;
-        if (!place) return;
-
-        await place.fetchFields({ fields: ['location', 'displayName'] });
-
-        if (!place.location) {
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place || !place.geometry || !place.geometry.location) {
           alert('找不到該地標的位置資訊');
           return;
         }
 
-        const lat = place.location.lat().toFixed(6);
-        const lng = place.location.lng().toFixed(6);
+        const lat = place.geometry.location.lat().toFixed(6);
+        const lng = place.geometry.location.lng().toFixed(6);
 
         document.getElementById('edit-spot-lat').value = lat;
         document.getElementById('edit-spot-lng').value = lng;
 
         const nameInput = document.getElementById('edit-spot-name');
         if (!nameInput.value || nameInput.value.trim() === '') {
-          nameInput.value = place.displayName;
+          nameInput.value = place.name || '';
         }
       });
     } catch (err) {
