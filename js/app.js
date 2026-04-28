@@ -1,4 +1,4 @@
-// ==============================
+﻿// ==============================
 
 // 沖繩旅遊地圖 — 主邏輯
 
@@ -218,7 +218,7 @@
       Polyline = window.google.maps.Polyline;
 
       state.map = new Map(document.getElementById('map'), {
-        center: APP_DATA.center,
+        center: { lat: APP_DATA.center[0], lng: APP_DATA.center[1] },
         zoom: APP_DATA.defaultZoom,
         mapId: 'DEMO_MAP_ID', // required for AdvancedMarkers
         mapTypeControl: false,
@@ -255,7 +255,7 @@
     if (popupHtml) {
       const info = new window.google.maps.InfoWindow({ content: popupHtml });
       // Remove tight click listener memory leak
-      marker.addListener('click', () => info.open(state.map, marker));
+      marker.addListener('gmp-click', () => info.open(state.map, marker));
     }
 
     if (layerArray) layerArray.push(marker);
@@ -675,19 +675,10 @@
 
     if(AdvancedMarkerElement) {
       const info = new window.google.maps.InfoWindow({
-        content: '<div style="text-align:center;"><p>📍 選擇此座標？</p><button id="btn-confirm-pick" class="btn-primary btn-sm" style="margin-top:4px;">確定</button></div>'
+        content: <div style="text-align:center;font-weight:bold;"> km<br>約  分鐘</div>,
+        position: { lat: (from[0] + to[0]) / 2, lng: (from[1] + to[1]) / 2 }
       });
-      clearGoogleLayer(state.routeLayer);
-      const m = addCustomMarker(e.latlng.lat, e.latlng.lng, "marker-spot", "?", state.routeLayer, null);
-      if(m) info.open(state.map, m);
-      
-      window.google.maps.event.addListenerOnce(info, 'domready', () => {
-        document.getElementById('btn-confirm-pick').addEventListener('click', () => {
-          document.getElementById('edit-spot-lat').value = e.latlng.lat.toFixed(4);
-          document.getElementById('edit-spot-lng').value = e.latlng.lng.toFixed(4);
-          cancelMapPick();
-        });
-      });
+      info.open(state.map);
     }
 
     if(LatLngBounds){ const b = new LatLngBounds(); b.extend({lat: from[0], lng: from[1]}); b.extend({lat: to[0], lng: to[1]}); state.map.fitBounds(b); }
@@ -1952,10 +1943,28 @@
   }
 
   function onMapPick(e) {
-    document.getElementById('edit-spot-lat').value = e.latlng.lat.toFixed(4);
-    document.getElementById('edit-spot-lng').value = e.latlng.lng.toFixed(4);
-    endMapPick();
-    openModal('spot-editor-modal');
+    if(AdvancedMarkerElement) {
+      const info = new window.google.maps.InfoWindow({
+        content: '<div style=""text-align:center;""><p>📍選擇此座標？</p><button id=""btn-confirm-pick"" class=""btn-primary btn-sm"" style=""margin-top:4px;"">確定</button></div>',
+        position: { lat: e.latlng.lat, lng: e.latlng.lng }
+      });
+      info.open(state.map);
+      
+      window.google.maps.event.addListenerOnce(info, 'domready', () => {
+        document.getElementById('btn-confirm-pick').addEventListener('click', () => {
+          document.getElementById('edit-spot-lat').value = e.latlng.lat.toFixed(4);
+          document.getElementById('edit-spot-lng').value = e.latlng.lng.toFixed(4);
+          info.close();
+          endMapPick();
+          openModal('spot-editor-modal');
+        });
+      });
+    } else {
+        document.getElementById('edit-spot-lat').value = e.latlng.lat.toFixed(4);
+        document.getElementById('edit-spot-lng').value = e.latlng.lng.toFixed(4);
+        endMapPick();
+        openModal('spot-editor-modal');
+    }
   }
 
   function cancelMapPick() {
@@ -2397,3 +2406,4 @@
     init();
   }
 })();
+
