@@ -2055,7 +2055,7 @@
     const input = document.getElementById('edit-spot-search');
     if (!input) return;
 
-    if (!window.google || !window.google.maps) {
+    if (!window.google || !window.google.maps || !window.google.maps.places || !window.google.maps.places.Autocomplete) {
       if (!placesAutocompleteInitialized) {
         setTimeout(initGooglePlaces, 500);
       }
