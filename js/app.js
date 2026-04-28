@@ -1751,6 +1751,7 @@
   function openSpotEditor(existingSpot) {
     const form = document.getElementById('spot-editor-form');
     const title = document.getElementById('spot-editor-title');
+    document.getElementById('edit-spot-search').value = '';
 
     if (existingSpot) {
       title.textContent = '✏️ 編輯景點';
@@ -1998,6 +1999,58 @@
     showDayOnMap();
     scheduleNotifications();
     closeModal('settings-modal');
+  }
+
+  // ==================== Google Places ====================
+
+  let placesAutocompleteInitialized = false;
+
+  function initGooglePlaces() {
+    const input = document.getElementById('edit-spot-search');
+    if (!input) return;
+
+    // Check if Google Maps is loaded
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
+      if (!placesAutocompleteInitialized) {
+        setTimeout(initGooglePlaces, 500); // retry later
+      }
+      return;
+    }
+
+    if (placesAutocompleteInitialized) return;
+    placesAutocompleteInitialized = true;
+
+    const autocomplete = new window.google.maps.places.Autocomplete(input, {
+      fields: ['geometry', 'name'],
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      
+      if (!place.geometry || !place.geometry.location) {
+        alert('找不到該地標的位置資訊');
+        return;
+      }
+
+      // fill inputs
+      const lat = place.geometry.location.lat().toFixed(6);
+      const lng = place.geometry.location.lng().toFixed(6);
+      
+      document.getElementById('edit-spot-lat').value = lat;
+      document.getElementById('edit-spot-lng').value = lng;
+      
+      const nameInput = document.getElementById('edit-spot-name');
+      if (!nameInput.value || nameInput.value.trim() === '') {
+        nameInput.value = place.name;
+      }
+    });
+
+    // Prevent submitting the whole form when pressing enter on the search input
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+      }
+    });
   }
 
   // ==================== Init Itinerary Editor ====================
@@ -2282,6 +2335,7 @@
     initSidebarToggle();
     initModals();
     initItineraryEditor();
+    initGooglePlaces();
     initTravelTools();
 
     // Google Drive 載入行程
