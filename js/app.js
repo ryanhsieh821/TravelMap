@@ -1814,6 +1814,7 @@
     }
 
     openModal('spot-editor-modal');
+    initGooglePlaces();
   }
 
   function handleSpotEditorSubmit(e) {

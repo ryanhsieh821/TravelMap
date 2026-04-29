@@ -374,6 +374,10 @@ body {
   overflow-y: auto;
 }
 
+.pac-container {
+  z-index: 3000 !important;
+}
+
 /* Expense */
 #expense-form {
 
