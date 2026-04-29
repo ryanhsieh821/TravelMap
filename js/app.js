@@ -11,7 +11,14 @@
   // ==================== State ====================
 
   const STORAGE_KEY = 'okinawa_itinerary';
-  const GITHUB_ITINERARY_URL = 'https://ryanhsieh821.github.io/TravelMap/data/itinerary.json';
+  const GITHUB_OWNER = 'ryanhsieh821';
+  const GITHUB_REPO = 'TravelMap';
+  const GITHUB_BRANCH = 'main';
+  const GITHUB_ITINERARY_PATH = 'data/itinerary.json';
+  const GITHUB_BACKUP_DIR = 'data/backup';
+  const GITHUB_PAGES_BASE_URL = 'https://ryanhsieh821.github.io/TravelMap';
+  const GITHUB_API_CONTENTS_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents`;
+  const GITHUB_ITINERARY_URL = `${GITHUB_PAGES_BASE_URL}/${GITHUB_ITINERARY_PATH}`;
 
   const state = {
     map: null,
@@ -120,6 +127,105 @@
     } catch (e) {
       console.error('GitHub reload failed:', e);
       alert('❌ 載入失敗：' + e.message + '\n請確認網路連線或 GitHub 上有行程檔案。\nURL: ' + GITHUB_ITINERARY_URL);
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  }
+
+  function getTimestampParts(date = new Date()) {
+    const pad = n => String(n).padStart(2, '0');
+    return {
+      date: `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`,
+      time: `${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`,
+      password: `${pad(date.getMinutes())}${pad(date.getHours())}`
+    };
+  }
+
+  function utf8ToBase64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+    return btoa(binary);
+  }
+
+  async function githubApi(path, options = {}) {
+    const url = `${GITHUB_API_CONTENTS_URL}/${path}`;
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(options.headers || {})
+      }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || `GitHub API HTTP ${res.status}`);
+    }
+    return data;
+  }
+
+  async function uploadItineraryToGitHub() {
+    const btn = document.getElementById('btn-upload-github');
+    const originalText = btn.textContent;
+    const { date, time, password } = getTimestampParts();
+
+    const inputPassword = prompt('請輸入上傳密碼（現在時分顛倒，例如 13:05 → 0513）：');
+    if (inputPassword === null) return;
+    if (inputPassword.trim() !== password) {
+      alert('密碼錯誤，未上傳。');
+      return;
+    }
+
+    const token = prompt('請輸入 GitHub Personal Access Token（需要 repo contents 寫入權限）：');
+    if (token === null) return;
+    if (!token.trim()) {
+      alert('GitHub Token 不能空白。');
+      return;
+    }
+
+    if (!confirm('確定要上傳目前行程嗎？\n\n流程：先備份 GitHub 目前的 itinerary.json，再覆寫 data/itinerary.json。')) return;
+
+    btn.textContent = '⏳ 上傳中...';
+    btn.disabled = true;
+
+    try {
+      const authHeaders = { Authorization: `Bearer ${token.trim()}` };
+      const currentFile = await githubApi(`${GITHUB_ITINERARY_PATH}?ref=${GITHUB_BRANCH}`, {
+        headers: authHeaders
+      });
+
+      const backupPath = `${GITHUB_BACKUP_DIR}/itinerary_${date}_${time}.json`;
+      await githubApi(backupPath, {
+        method: 'PUT',
+        headers: authHeaders,
+        body: JSON.stringify({
+          message: `Backup itinerary ${date}_${time}`,
+          content: currentFile.content.replace(/\s/g, ''),
+          branch: GITHUB_BRANCH
+        })
+      });
+
+      const exportData = {
+        title: state.appTitle,
+        itinerary: state.itinerary
+      };
+      await githubApi(GITHUB_ITINERARY_PATH, {
+        method: 'PUT',
+        headers: authHeaders,
+        body: JSON.stringify({
+          message: `Update itinerary ${date}_${time}`,
+          content: utf8ToBase64(JSON.stringify(exportData, null, 2)),
+          sha: currentFile.sha,
+          branch: GITHUB_BRANCH
+        })
+      });
+
+      alert(`✅ 已上傳行程！\n\n備份：${GITHUB_PAGES_BASE_URL}/${backupPath}\n目前：${GITHUB_ITINERARY_URL}`);
+    } catch (e) {
+      console.error('GitHub upload failed:', e);
+      alert('❌ 上傳失敗：' + e.message + '\n\n請確認 Token 有 repo contents 寫入權限，且 repository/branch 路徑正確。');
     } finally {
       btn.textContent = originalText;
       btn.disabled = false;
@@ -2141,6 +2247,8 @@
       if (!confirm('確定要從 GitHub 重新載入行程嗎？會覆蓋目前資料。')) return;
       reloadFromGitHub();
     });
+
+    document.getElementById('btn-upload-github').addEventListener('click', uploadItineraryToGitHub);
 
     document.getElementById('btn-clear-storage').addEventListener('click', () => {
       if (!confirm('⚠️ 確定要清空所有本機資料嗎？\n\n這會清除：行程、記帳紀錄、行前清單、照片、天氣快取等所有資料。\n\n此操作無法復原！')) return;
