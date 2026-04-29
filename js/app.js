@@ -11,7 +11,7 @@
   // ==================== State ====================
 
   const STORAGE_KEY = 'okinawa_itinerary';
-  const GITHUB_ITINERARY_URL = 'https://bingfenghung.github.io/okinawa-travel-pwa/data/itinerary.json';
+  const GITHUB_ITINERARY_URL = 'https://ryanhsieh821.github.io/TravelMap/data/itinerary.json';
 
   const state = {
     map: null,
