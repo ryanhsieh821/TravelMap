@@ -212,6 +212,14 @@
     state.positionMarker = null;
 
     try {
+      for (let attempt = 0; attempt < 40 && (!window.google || !window.google.maps || !window.google.maps.Map); attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 250));
+      }
+
+      if (!window.google || !window.google.maps || !window.google.maps.Map) {
+        throw new Error('Google Maps API is unavailable. Check the API key and Google Cloud settings.');
+      }
+
       Map = window.google.maps.Map;
       AdvancedMarkerElement = window.google.maps.Marker;
       LatLngBounds = window.google.maps.LatLngBounds;
@@ -552,6 +560,8 @@
   // ==================== Map Display ====================
 
   function showDayOnMap() {
+    if (!state.map) return;
+
     clearGoogleLayer(state.markerLayer);
     clearGoogleLayer(state.routeLayer);
     clearGoogleLayer(state.nearbyLayer);
