@@ -1,0 +1,378 @@
+{
+  "title": "沖繩旅遊地圖",
+  "itinerary": [
+    {
+      "day": 1,
+      "date": "2026-04-24",
+      "title": "Day 1 — 抵達沖繩 & 國際通",
+      "weather": {
+        "icon": "🌧️",
+        "temp": "32°C / 26°C",
+        "desc": "(歷年參考) 大毛毛雨",
+        "humidity": "78%",
+        "wind": "東風 3m/s"
+      },
+      "spots": [
+        {
+          "id": "d1s1",
+          "name": "那霸機場",
+          "lat": 26.2058,
+          "lng": 127.646,
+          "time": "15:45",
+          "duration": 60,
+          "description": "抵達沖繩！領取行李後前往租車處",
+          "tips": "建議在機場先換好日幣、買好飲料",
+          "transportToNext": {
+            "mode": "monorail",
+            "duration": 10,
+            "note": "🚝 前往飯店",
+            "color": "#e74c3c"
+          },
+          "nearby": [
+            {
+              "name": "空港食堂",
+              "lat": 26.206,
+              "lng": 127.6465,
+              "type": "restaurant",
+              "cuisine": "🍜 沖繩麵",
+              "price": "¥750"
+            },
+            {
+              "name": "A&W 那霸空港店",
+              "lat": 26.2062,
+              "lng": 127.6458,
+              "type": "restaurant",
+              "cuisine": "🍔 美式速食",
+              "price": "¥700"
+            },
+            {
+              "name": "ポークたまごおにぎり本店 空港1F店",
+              "lat": 26.2056,
+              "lng": 127.6462,
+              "type": "restaurant",
+              "cuisine": "🍙 飯糰",
+              "price": "¥350"
+            }
+          ]
+        },
+        {
+          "id": "d1s2",
+          "name": "沖繩那霸旭橋托里菲托酒店 ホテル・トリフィート那覇旭橋",
+          "lat": 26.2144,
+          "lng": 127.6728,
+          "time": "16:55",
+          "duration": 60,
+          "description": "Check in 放行李",
+          "tips": "飯店沒有飲用水",
+          "transportToNext": {
+            "mode": "walk",
+            "duration": 12,
+            "note": "走路前往國際通",
+            "color": "#f39c12"
+          },
+          "nearby": []
+        },
+        {
+          "id": "d1s4",
+          "name": "國際通 (Kokusai-dori)",
+          "lat": 26.2154,
+          "lng": 127.6847,
+          "time": "18:07",
+          "duration": 60,
+          "description": "沖繩最熱鬧的商店街，約 1.6 公里長，伴手禮、美食一次買齊",
+          "tips": "晚上可以先逛逛熟悉環境，週日有步行者天國",
+          "transportToNext": null,
+          "nearby": [
+            {
+              "name": "暖暮拉麵 國際通店",
+              "lat": 26.2148,
+              "lng": 127.6855,
+              "type": "restaurant",
+              "cuisine": "🍜 拉麵",
+              "price": "¥900"
+            },
+            {
+              "name": "Jack's Steak House",
+              "lat": 26.2133,
+              "lng": 127.6788,
+              "type": "restaurant",
+              "cuisine": "🥩 牛排",
+              "price": "¥1500"
+            },
+            {
+              "name": "花笠食堂",
+              "lat": 26.2143,
+              "lng": 127.6862,
+              "type": "restaurant",
+              "cuisine": "🍱 沖繩料理",
+              "price": "¥800"
+            },
+            {
+              "name": "ステーキハウス88 國際通店",
+              "lat": 26.2152,
+              "lng": 127.6838,
+              "type": "restaurant",
+              "cuisine": "🥩 牛排",
+              "price": "¥2000"
+            },
+            {
+              "name": "鹽屋 國際通店",
+              "lat": 26.2156,
+              "lng": 127.685,
+              "type": "restaurant",
+              "cuisine": "🍦 冰淇淋",
+              "price": "¥400"
+            },
+            {
+              "name": "FamilyMart 國際通",
+              "lat": 26.2158,
+              "lng": 127.684,
+              "type": "convenience"
+            }
+          ]
+        },
+        {
+          "id": "sp_mocyvj1d_rme6",
+          "name": "鶴亀合戦",
+          "lat": 26.2146,
+          "lng": 127.6812,
+          "time": "19:07",
+          "duration": 60,
+          "description": "壽司、炸天婦羅、海鮮",
+          "tips": "",
+          "transportToNext": {
+            "mode": "walk",
+            "duration": 0,
+            "note": "🚶 前往下一站",
+            "color": "#f39c12"
+          },
+          "nearby": []
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "date": "2026-04-25",
+      "title": "Day 2 — 那霸百貨公司探索",
+      "weather": {
+        "icon": "🌦️",
+        "temp": "32°C / 27°C",
+        "desc": "(歷年參考) 小毛毛雨",
+        "humidity": "73%",
+        "wind": "東風 3m/s"
+      },
+      "spots": [
+        {
+          "id": "d2s2",
+          "name": "波上宮",
+          "lat": 26.2178,
+          "lng": 127.6668,
+          "time": "09:30",
+          "duration": 60,
+          "description": "這座神社建於 1890 年，是慶典的舉辦地點，可自懸崖上觀賞風景",
+          "tips": "琉球八社之首，旁邊有波之上海灘可順遊",
+          "transportToNext": {
+            "mode": "walk",
+            "duration": 20,
+            "note": "🚶 前往下一站",
+            "color": "#f39c12"
+          },
+          "nearby": [
+            {
+              "name": "Lawson 若狹",
+              "lat": 26.2175,
+              "lng": 127.668,
+              "type": "convenience"
+            },
+            {
+              "name": "波之上茶屋",
+              "lat": 26.2176,
+              "lng": 127.6672,
+              "type": "restaurant",
+              "cuisine": "🍵 甜點",
+              "price": "¥500"
+            }
+          ]
+        },
+        {
+          "id": "d2s3",
+          "name": "那覇バスターミナル",
+          "lat": 26.2145,
+          "lng": 127.6796,
+          "time": "10:50",
+          "duration": 30,
+          "description": "",
+          "tips": "",
+          "transportToNext": {
+            "mode": "monorail",
+            "duration": 20,
+            "note": "🚶 前往下一站",
+            "color": "#e74c3c"
+          },
+          "nearby": [
+            {
+              "name": "牧志天婦羅店",
+              "lat": 26.214,
+              "lng": 127.6872,
+              "type": "restaurant",
+              "cuisine": "🍤 天婦羅",
+              "price": "¥100/個"
+            },
+            {
+              "name": "松原屋製菓",
+              "lat": 26.2138,
+              "lng": 127.6865,
+              "type": "restaurant",
+              "cuisine": "🍡 沖繩菓子",
+              "price": "¥200"
+            },
+            {
+              "name": "壺屋やちむん通り茶屋",
+              "lat": 26.2135,
+              "lng": 127.688,
+              "type": "restaurant",
+              "cuisine": "🍵 茶屋",
+              "price": "¥600"
+            }
+          ]
+        },
+        {
+          "id": "d2s4",
+          "name": "Palette Kumoji パレットくもじ",
+          "lat": 26.2139,
+          "lng": 127.6809,
+          "time": "11:40",
+          "duration": 60,
+          "description": "",
+          "tips": "",
+          "transportToNext": {
+            "mode": "monorail",
+            "duration": 30,
+            "note": "尋找uniquelo",
+            "color": "#e74c3c"
+          },
+          "nearby": [
+            {
+              "name": "T Galleria 美食區",
+              "lat": 26.2318,
+              "lng": 127.6925,
+              "type": "restaurant",
+              "cuisine": "🍽️ 輕食",
+              "price": "¥800"
+            }
+          ]
+        },
+        {
+          "id": "d2s6",
+          "name": "San-A那霸Main Place",
+          "lat": 26.2325,
+          "lng": 127.696,
+          "time": "13:10",
+          "duration": 120,
+          "description": "那霸大型購物中心，在商場用午餐",
+          "tips": "商場內有許多餐廳可選擇，適合在這裡吃午餐",
+          "transportToNext": {
+            "mode": "walk",
+            "duration": 12,
+            "note": "🚶 前往下一站",
+            "color": "#f39c12"
+          },
+          "nearby": [
+            {
+              "name": "San-A 美食街",
+              "lat": 26.2328,
+              "lng": 127.6965,
+              "type": "restaurant",
+              "cuisine": "🍽️ 美食街",
+              "price": "¥900"
+            },
+            {
+              "name": "やっぱりステーキ おもろまち店",
+              "lat": 26.233,
+              "lng": 127.6958,
+              "type": "restaurant",
+              "cuisine": "🥩 牛排",
+              "price": "¥1000"
+            },
+            {
+              "name": "スターバックス おもろまち",
+              "lat": 26.2322,
+              "lng": 127.6955,
+              "type": "restaurant",
+              "cuisine": "☕ 咖啡",
+              "price": "¥500"
+            }
+          ]
+        },
+        {
+          "id": "sp_moeb06il_94yv",
+          "name": "UNIQLO Ryubo Ameku Rakuichi ユニクロ 天久りうぼう楽市店",
+          "lat": 26.2338,
+          "lng": 127.6837,
+          "time": "15:22",
+          "duration": 60,
+          "description": "",
+          "tips": "",
+          "transportToNext": {
+            "mode": "taxi",
+            "duration": 30,
+            "note": "搭車回飯店",
+            "color": "#9b59b6"
+          },
+          "nearby": []
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "date": "2026-04-26",
+      "title": "Day 3 — 買伴手禮",
+      "weather": {
+        "icon": "🌦️",
+        "temp": "32°C / 27°C",
+        "desc": "(歷年參考) 小毛毛雨",
+        "humidity": "73%",
+        "wind": "東風 4m/s"
+      },
+      "spots": [
+        {
+          "id": "d3s1",
+          "name": "唐吉訶德 那霸壺川店 ドン・キホーテ 那覇壺川店",
+          "lat": 26.2053,
+          "lng": 127.6808,
+          "time": "10:30",
+          "duration": 120,
+          "description": "",
+          "tips": "",
+          "transportToNext": null,
+          "nearby": [
+            {
+              "name": "iias 沖繩豐崎美食街",
+              "lat": 26.1545,
+              "lng": 127.6562,
+              "type": "restaurant",
+              "cuisine": "🍽️ 美食街",
+              "price": "¥900"
+            },
+            {
+              "name": "丸亀製麺 iias沖繩豐崎店",
+              "lat": 26.1546,
+              "lng": 127.6555,
+              "type": "restaurant",
+              "cuisine": "🍜 烏龍麵",
+              "price": "¥500"
+            },
+            {
+              "name": "沖繩そば やんばる iias店",
+              "lat": 26.1549,
+              "lng": 127.656,
+              "type": "restaurant",
+              "cuisine": "🍜 沖繩麵",
+              "price": "¥750"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
