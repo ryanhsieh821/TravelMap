@@ -171,7 +171,7 @@
     const originalText = btn.textContent;
     const { date, time, password } = getTimestampParts();
 
-    const inputPassword = prompt('請輸入上傳密碼 ：');
+    const inputPassword = prompt('請輸入上傳密碼（現在時分顛倒，例如 13:05 → 0513）：');
     if (inputPassword === null) return;
     if (inputPassword.trim() !== password) {
       alert('密碼錯誤，未上傳。');
@@ -303,6 +303,11 @@
 
   function openGoogleMaps(lat, lng, name) {
     const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    window.open(url, '_blank');
+  }
+
+  function openStreetView(lat, lng) {
+    const url = `https://www.twipcam.com/widget/v1/query-cam-list-by-coordinate?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
     window.open(url, '_blank');
   }
 
@@ -531,6 +536,7 @@
         <div class="spot-actions">
           <button class="spot-action-btn btn-navigate" data-spot-id="${spot.id}">🧭 導航</button>
           <button class="spot-action-btn btn-google-maps" data-lat="${spot.lat}" data-lng="${spot.lng}" data-name="${esc(spot.name)}">🗺️ Google Maps</button>
+          <button class="spot-action-btn btn-street-view" data-lat="${spot.lat}" data-lng="${spot.lng}">📷 街景</button>
           ${spot.nearby && spot.nearby.length > 0 ? `<button class="spot-action-btn btn-nearby" data-spot-id="${spot.id}">🍜 附近美食</button>` : ''}
           <button class="spot-action-btn btn-photo" data-spot-id="${spot.id}">📸 照片</button>
           <button class="spot-edit-btn btn-edit-spot" data-spot-id="${spot.id}" title="編輯">✏️</button>
@@ -606,6 +612,13 @@
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         openGoogleMaps(btn.dataset.lat, btn.dataset.lng, btn.dataset.name);
+      });
+    });
+
+    container.querySelectorAll('.btn-street-view').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openStreetView(btn.dataset.lat, btn.dataset.lng);
       });
     });
 
@@ -1663,6 +1676,7 @@
         <div class="spot-actions">
           <button class="spot-action-btn btn-navigate" data-spot-id="${spot.id}">🧭 導航</button>
           <button class="spot-action-btn btn-google-maps" data-lat="${spot.lat}" data-lng="${spot.lng}" data-name="${esc(spot.name)}">🗺️ Google Maps</button>
+          <button class="spot-action-btn btn-street-view" data-lat="${spot.lat}" data-lng="${spot.lng}">📷 街景</button>
           ${spot.nearby && spot.nearby.length > 0 ? `<button class="spot-action-btn btn-nearby" data-spot-id="${spot.id}">🍜 附近美食</button>` : ''}
           <button class="spot-action-btn btn-photo" data-spot-id="${spot.id}">📸 照片</button>
           <button class="spot-edit-btn btn-edit-spot" data-spot-id="${spot.id}" title="編輯">✏️</button>
@@ -1732,6 +1746,13 @@
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         openGoogleMaps(btn.dataset.lat, btn.dataset.lng, btn.dataset.name);
+      });
+    });
+
+    container.querySelectorAll('.btn-street-view').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openStreetView(btn.dataset.lat, btn.dataset.lng);
       });
     });
 
