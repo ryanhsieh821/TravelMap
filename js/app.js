@@ -11,7 +11,7 @@
   // ==================== State ====================
 
   const STORAGE_KEY = 'okinawa_itinerary';
-  const GITHUB_ITINERARY_URL = 'https://ryanhsieh821.github.io/TravelMap/data/itinerary.json';
+  const GITHUB_ITINERARY_URL = 'https://bingfenghung.github.io/okinawa-travel-pwa/data/itinerary.json';
 
   const state = {
     map: null,
@@ -1994,6 +1994,17 @@
 
   function exportItinerary() {
     try {
+      const defaultFilename = `okinawa-itinerary-${new Date().toISOString().slice(0, 10)}.json`;
+      const inputFilename = prompt('請輸入匯出的 JSON 檔名：', defaultFilename);
+      if (inputFilename === null) return;
+
+      const filename = inputFilename.trim();
+      if (!filename) {
+        alert('檔名不能空白');
+        return;
+      }
+
+      const downloadFilename = filename.toLowerCase().endsWith('.json') ? filename : `${filename}.json`;
       const exportData = {
         title: state.appTitle,
         itinerary: state.itinerary
@@ -2003,7 +2014,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `okinawa-itinerary-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = downloadFilename;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
