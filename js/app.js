@@ -11,7 +11,7 @@
   // ==================== State ====================
 
   const STORAGE_KEY = 'okinawa_itinerary';
-  const GITHUB_ITINERARY_URL = 'https://ryanhsieh821.github.io/TravelMap/data/itinerary.json';
+  const GITHUB_ITINERARY_URL = 'https://bingfenghung.github.io/okinawa-travel-pwa/data/itinerary.json';
 
   const state = {
     map: null,
@@ -426,7 +426,7 @@
           <button class="spot-action-btn btn-navigate" data-spot-id="${spot.id}">🧭 導航</button>
           <button class="spot-action-btn btn-google-maps" data-lat="${spot.lat}" data-lng="${spot.lng}" data-name="${esc(spot.name)}">🗺️ Google Maps</button>
           ${spot.nearby && spot.nearby.length > 0 ? `<button class="spot-action-btn btn-nearby" data-spot-id="${spot.id}">🍜 附近美食</button>` : ''}
-          <button class="spot-action-btn btn-photo" data-spot-id="${spot.id}">📸 拍照</button>
+          <button class="spot-action-btn btn-photo" data-spot-id="${spot.id}">📸 照片</button>
           <button class="spot-edit-btn btn-edit-spot" data-spot-id="${spot.id}" title="編輯">✏️</button>
           <button class="spot-edit-btn btn-delete-spot" data-spot-id="${spot.id}" title="刪除">🗑️</button>
           ${reorderHtml}
@@ -1213,7 +1213,6 @@
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
-      input.capture = 'environment';
       input.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -1251,7 +1250,7 @@
             console.error(err);
             alert('❌ 上傳發生錯誤：\n' + (err.message || JSON.stringify(err)));
           } finally {
-            btnList.forEach(btn => btn.textContent = '📸 拍照');
+            btnList.forEach(btn => btn.textContent = '📸 照片');
             renderPhotoGallery();
           }
         };
@@ -1559,7 +1558,7 @@
           <button class="spot-action-btn btn-navigate" data-spot-id="${spot.id}">🧭 導航</button>
           <button class="spot-action-btn btn-google-maps" data-lat="${spot.lat}" data-lng="${spot.lng}" data-name="${esc(spot.name)}">🗺️ Google Maps</button>
           ${spot.nearby && spot.nearby.length > 0 ? `<button class="spot-action-btn btn-nearby" data-spot-id="${spot.id}">🍜 附近美食</button>` : ''}
-          <button class="spot-action-btn btn-photo" data-spot-id="${spot.id}">📸 拍照</button>
+          <button class="spot-action-btn btn-photo" data-spot-id="${spot.id}">📸 照片</button>
           <button class="spot-edit-btn btn-edit-spot" data-spot-id="${spot.id}" title="編輯">✏️</button>
           <button class="spot-edit-btn btn-delete-spot" data-spot-id="${spot.id}" title="刪除">🗑️</button>
           <div class="spot-reorder" style="display:flex;gap:6px;">
@@ -1994,6 +1993,17 @@
 
   function exportItinerary() {
     try {
+      const defaultFilename = `okinawa-itinerary-${new Date().toISOString().slice(0, 10)}.json`;
+      const inputFilename = prompt('請輸入匯出的 JSON 檔名：', defaultFilename);
+      if (inputFilename === null) return;
+
+      const filename = inputFilename.trim();
+      if (!filename) {
+        alert('檔名不能空白');
+        return;
+      }
+
+      const downloadFilename = filename.toLowerCase().endsWith('.json') ? filename : `${filename}.json`;
       const exportData = {
         title: state.appTitle,
         itinerary: state.itinerary
@@ -2003,7 +2013,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `okinawa-itinerary-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = downloadFilename;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
