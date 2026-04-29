@@ -171,7 +171,7 @@
     const originalText = btn.textContent;
     const { date, time, password } = getTimestampParts();
 
-    const inputPassword = prompt('請輸入上傳密碼（現在時分顛倒，例如 13:05 → 0513）：');
+    const inputPassword = prompt('請輸入上傳密碼 ：');
     if (inputPassword === null) return;
     if (inputPassword.trim() !== password) {
       alert('密碼錯誤，未上傳。');
