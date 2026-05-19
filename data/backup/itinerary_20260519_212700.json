@@ -1,0 +1,329 @@
+{
+  "title": "台南旅遊地圖（完整最終版）",
+  "itinerary": [
+    {
+      "day": 1,
+      "date": "2026-05-01",
+      "title": "Day 1 — 開元路午餐・國華街・河樂廣場・安平入住",
+      "weather": {
+        "icon": "☁️",
+        "temp": "22°C / 18°C",
+        "desc": "陰天",
+        "humidity": "70%",
+        "wind": "北風 6m/s"
+      },
+      "spots": [
+        {
+          "id": "d1s1",
+          "name": "開元紅燒土魠魚羹",
+          "lat": 22.99944,
+          "lng": 120.22683,
+          "time": "14:00",
+          "duration": 60,
+          "description": "台南開元路一帶的土魠魚羹午餐點，適合作為第一天抵達後的正餐。",
+          "tips": "若遇用餐尖峰可先點主餐，吃完再往中西區移動。",
+          "transportToNext": {
+            "mode": "car",
+            "duration": 18,
+            "note": "🚗 前往中西區國華街商圈",
+            "color": "#3498db"
+          },
+          "nearby": [
+            {
+              "name": "阿輝炒鱔魚",
+              "lat": 22.9991,
+              "lng": 120.2262,
+              "type": "restaurant",
+              "cuisine": "炒鱔魚",
+              "price": "$120"
+            },
+            {
+              "name": "双生綠豆沙牛奶",
+              "lat": 22.9988,
+              "lng": 120.2259,
+              "type": "restaurant",
+              "cuisine": "飲料 / 綠豆沙牛奶",
+              "price": "$60"
+            }
+          ]
+        },
+        {
+          "id": "d1s2",
+          "name": "年繡花鞋",
+          "lat": 22.9935,
+          "lng": 120.1975,
+          "time": "15:18",
+          "duration": 45,
+          "description": "台南在地手工繡花鞋老店，可安排挑選特色鞋款與街區散步。",
+          "tips": "附近巷弄狹窄，建議停車後步行；可與國華街小吃一起安排。",
+          "transportToNext": {
+            "mode": "walk",
+            "duration": 8,
+            "note": "🚶 步行前往 More and more 復古拍貼",
+            "color": "#f39c12"
+          },
+          "nearby": [
+            {
+              "name": "富盛號碗粿",
+              "lat": 22.9967,
+              "lng": 120.1972,
+              "type": "restaurant",
+              "cuisine": "碗粿",
+              "price": "$50"
+            },
+            {
+              "name": "金得春捲",
+              "lat": 22.9964,
+              "lng": 120.1978,
+              "type": "restaurant",
+              "cuisine": "春捲",
+              "price": "$60"
+            }
+          ]
+        },
+        {
+          "id": "d1s3",
+          "name": "More and more 復古拍貼",
+          "lat": 22.991004,
+          "lng": 120.196635,
+          "time": "16:11",
+          "duration": 75,
+          "description": "位於府前路二段巷內的復古拍貼店，適合朋友或情侶行程留念。",
+          "tips": "現場制常需要等候，建議先確認營業時間與排隊狀況。",
+          "transportToNext": {
+            "mode": "walk",
+            "duration": 12,
+            "note": "🚶 前往河樂廣場，傍晚光線較適合拍照與散步",
+            "color": "#f39c12"
+          },
+          "nearby": [
+            {
+              "name": "蜷尾家甘味處散步甜食",
+              "lat": 22.997,
+              "lng": 120.198,
+              "type": "restaurant",
+              "cuisine": "冰淇淋 / 甜點",
+              "price": "$90"
+            },
+            {
+              "name": "正興街商圈",
+              "lat": 22.9962,
+              "lng": 120.1969,
+              "type": "attraction",
+              "cuisine": "",
+              "price": "free"
+            }
+          ]
+        },
+        {
+          "id": "d1s5",
+          "name": "悠樂旅宿",
+          "lat": 22.99866,
+          "lng": 120.16073,
+          "time": "17:38",
+          "duration": 480,
+          "description": "入住安平附近住宿，方便隔天安排安平老街、樹屋與海邊行程。",
+          "tips": "入住後可視體力步行或開車到安平老街附近吃宵夜。",
+          "transportToNext": null,
+          "nearby": [
+            {
+              "name": "周氏蝦捲",
+              "lat": 23.0003,
+              "lng": 120.1612,
+              "type": "restaurant",
+              "cuisine": "蝦捲 / 台式小吃",
+              "price": "$100"
+            },
+            {
+              "name": "文章牛肉湯",
+              "lat": 23.001,
+              "lng": 120.1615,
+              "type": "restaurant",
+              "cuisine": "牛肉湯",
+              "price": "$150"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "date": "2026-05-02",
+      "title": "Day 2 — 安平老街・海邊・上海華都小吃",
+      "weather": {
+        "icon": "☁️",
+        "temp": "23°C / 17°C",
+        "desc": "陰天",
+        "humidity": "70%",
+        "wind": "東風 5m/s"
+      },
+      "spots": [
+        {
+          "id": "d2s1",
+          "name": "米尼莫早午餐 MNM Brunnch",
+          "lat": 22.996109,
+          "lng": 120.174644,
+          "time": "11:30",
+          "duration": 75,
+          "description": "第二天用早午餐開場，位置介於安平與市區之間，適合晚起後順路開始行程。",
+          "tips": "假日建議提早抵達或先查詢是否需要候位。",
+          "transportToNext": {
+            "mode": "car",
+            "duration": 10,
+            "note": "🚗 前往安平老街核心區",
+            "color": "#3498db"
+          },
+          "nearby": [
+            {
+              "name": "安平古堡",
+              "lat": 23.0016,
+              "lng": 120.1607,
+              "type": "attraction",
+              "cuisine": "",
+              "price": "$70"
+            },
+            {
+              "name": "周氏蝦捲",
+              "lat": 23.0003,
+              "lng": 120.1612,
+              "type": "restaurant",
+              "cuisine": "蝦捲 / 台式小吃",
+              "price": "$100"
+            }
+          ]
+        },
+        {
+          "id": "d2s2",
+          "name": "安平老街",
+          "lat": 23.0015,
+          "lng": 120.1605,
+          "time": "13:00",
+          "duration": 90,
+          "description": "安平經典老街區，適合吃小吃、逛巷弄、安排伴手禮與散步。",
+          "tips": "周邊小吃密集，建議少量多樣，不要一次吃太飽。",
+          "transportToNext": {
+            "mode": "walk",
+            "duration": 8,
+            "note": "🚶 步行前往安平樹屋與德記洋行",
+            "color": "#f39c12"
+          },
+          "nearby": [
+            {
+              "name": "安平豆花",
+              "lat": 23.0007,
+              "lng": 120.1608,
+              "type": "restaurant",
+              "cuisine": "豆花 / 甜點",
+              "price": "$50"
+            },
+            {
+              "name": "同記安平豆花",
+              "lat": 23.0012,
+              "lng": 120.1611,
+              "type": "restaurant",
+              "cuisine": "豆花",
+              "price": "$50"
+            }
+          ]
+        },
+        {
+          "id": "d2s3",
+          "name": "安平樹屋",
+          "lat": 23.0035,
+          "lng": 120.1596,
+          "time": "14:40",
+          "duration": 75,
+          "description": "老倉庫與榕樹共生的特殊景點，適合安排在下午較柔和光線時段。",
+          "tips": "內部步道較窄，假日人多時建議慢慢移動。",
+          "transportToNext": {
+            "mode": "car",
+            "duration": 10,
+            "note": "🚗 前往 Jolife 安平看海",
+            "color": "#3498db"
+          },
+          "nearby": [
+            {
+              "name": "德記洋行",
+              "lat": 23.0036,
+              "lng": 120.1595,
+              "type": "attraction",
+              "cuisine": "",
+              "price": "$70"
+            },
+            {
+              "name": "安平古堡",
+              "lat": 23.0016,
+              "lng": 120.1607,
+              "type": "attraction",
+              "cuisine": "",
+              "price": "$70"
+            }
+          ]
+        },
+        {
+          "id": "d2s4",
+          "name": "Jolife",
+          "lat": 22.989944,
+          "lng": 120.156912,
+          "time": "16:10",
+          "duration": 90,
+          "description": "安平看海與休息點，可安排傍晚前放慢節奏，接續晚餐。",
+          "tips": "靠海風較大，建議帶薄外套；若天氣不好可縮短停留時間。",
+          "transportToNext": {
+            "mode": "car",
+            "duration": 20,
+            "note": "🚗 前往中西區上海華都小吃晚餐",
+            "color": "#3498db"
+          },
+          "nearby": [
+            {
+              "name": "漁光島",
+              "lat": 22.9808,
+              "lng": 120.1552,
+              "type": "attraction",
+              "cuisine": "",
+              "price": "free"
+            },
+            {
+              "name": "觀夕平台",
+              "lat": 22.9959,
+              "lng": 120.1425,
+              "type": "attraction",
+              "cuisine": "",
+              "price": "free"
+            }
+          ]
+        },
+        {
+          "id": "d2s5",
+          "name": "上海華都小吃",
+          "lat": 22.994139,
+          "lng": 120.206167,
+          "time": "18:30",
+          "duration": 75,
+          "description": "第二天晚餐。位於台南市中西區民權路二段28號，主打上海風味料理與松針小籠湯包。",
+          "tips": "晚餐時段建議先確認營業時間；可點小籠湯包、炒飯與熱炒類分食。",
+          "transportToNext": null,
+          "nearby": [
+            {
+              "name": "吳園藝文中心",
+              "lat": 22.9946,
+              "lng": 120.2061,
+              "type": "attraction",
+              "cuisine": "",
+              "price": "free"
+            },
+            {
+              "name": "林百貨",
+              "lat": 22.9915,
+              "lng": 120.2025,
+              "type": "attraction",
+              "cuisine": "",
+              "price": "free"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
