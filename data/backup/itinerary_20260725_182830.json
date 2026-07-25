@@ -1,0 +1,179 @@
+{
+  "title": "東北角雙溪・牡丹・濂洞・八斗子・基隆廟口一日攝影行程",
+  "itinerary": [
+    {
+      "day": 1,
+      "date": "未指定",
+      "title": "Day 1 — 雙溪市場、牡丹車站、濂洞海景、八斗子漁港與基隆廟口",
+      "weather": {
+        "icon": "⛅",
+        "temp": "待查詢",
+        "desc": "未填入即時天氣，出發前請依日期查詢新北雙溪、瑞芳與基隆天氣",
+        "humidity": "待查詢",
+        "wind": "待查詢"
+      },
+      "spots": [
+        {
+          "id": "d1s2",
+          "name": "雙溪市場",
+          "lat": 25.0369,
+          "lng": 121.8654,
+          "time": "09:50",
+          "duration": 70,
+          "description": "雙溪公有零售市場位於新北市雙溪區太平路50號，是老街、市場小吃與在地生活感集中區，適合做第一站暖身街拍。",
+          "tips": "市場營業時間偏早，建議上午抵達。適合拍騎樓、攤販、老招牌、蒸氣與台味早餐。可用 X100VI 拍 Classic Chrome 或 Reala Ace 風格。",
+          "transportToNext": {
+            "mode": "drive",
+            "duration": 15,
+            "note": "前往牡丹車站，路線短但山區道路較窄，請放慢車速。",
+            "color": "#10B981"
+          },
+          "nearby": [
+            {
+              "name": "雙溪老街",
+              "type": "street",
+              "description": "可順拍老街巷弄、騎樓與在地小吃。"
+            },
+            {
+              "name": "雙溪車站",
+              "type": "transport",
+              "description": "可拍小鎮車站與旅人感構圖。"
+            },
+            {
+              "name": "雙溪蔡冰",
+              "type": "food",
+              "description": "位於市場內，可作為上午點心或休息點。"
+            }
+          ]
+        },
+        {
+          "id": "d1s3",
+          "name": "牡丹車站",
+          "lat": 25.058556,
+          "lng": 121.851889,
+          "time": "11:15",
+          "duration": 60,
+          "description": "牡丹車站位於新北市雙溪區牡丹里牡丹路159號，是宜蘭線上的山村車站，月台、彎道鐵軌與安靜聚落很適合日系情緒人像。",
+          "tips": "適合 35mm 視角拍月台與候車感，也可用長焦壓縮鐵軌彎道。拍攝月台請注意安全，不要進入軌道或影響旅客。",
+          "transportToNext": {
+            "mode": "drive",
+            "duration": 45,
+            "note": "前往瑞芳濂洞國小，山路與濱海路段較多，若遇雨霧請降低車速。",
+            "color": "#3B82F6"
+          },
+          "nearby": [
+            {
+              "name": "牡丹老街",
+              "type": "street",
+              "description": "小村落與溪谷氛圍，適合慢步調街拍。"
+            },
+            {
+              "name": "牡丹溪周邊",
+              "type": "photo_spot",
+              "description": "可拍山村、橋下溪流與寧靜生活感。"
+            },
+            {
+              "name": "慶雲宮",
+              "type": "temple",
+              "description": "在地信仰景點，可補拍聚落文化元素。"
+            }
+          ]
+        },
+        {
+          "id": "d1s4",
+          "name": "濂洞國小",
+          "lat": 25.122285,
+          "lng": 121.860055,
+          "time": "13:00",
+          "duration": 90,
+          "description": "濂洞國小位於瑞芳水湳洞高處，可俯瞰陰陽海、山城與濱海公路，是東北角經典山海視角。",
+          "tips": "假日較適合入內參觀；平日請避開上課時間並尊重校園規範。建議使用 Sony A7 IV + 70-200mm GM II 拍山海壓縮感，廣角可拍校園與海景同框。",
+          "transportToNext": {
+            "mode": "drive",
+            "duration": 35,
+            "note": "前往八斗子漁港，可沿濱海公路移動，途中可視天氣加拍陰陽海或南雅奇岩。",
+            "color": "#0EA5E9"
+          },
+          "nearby": [
+            {
+              "name": "陰陽海",
+              "type": "photo_spot",
+              "description": "山海色塊明顯，適合長焦壓縮與風景構圖。"
+            },
+            {
+              "name": "水湳洞選煉廠遺址",
+              "type": "historic",
+              "description": "金瓜石礦業感場景，適合廢墟感與故事性照片。"
+            },
+            {
+              "name": "黃金瀑布",
+              "type": "photo_spot",
+              "description": "若時間足夠可順拍，雨後水量通常較有畫面。"
+            }
+          ]
+        },
+        {
+          "id": "d1s5",
+          "name": "八斗子漁港",
+          "lat": 25.14444,
+          "lng": 121.78972,
+          "time": "15:05",
+          "duration": 100,
+          "description": "八斗子漁港位於基隆中正區，是北部大型漁港，可拍漁船、港邊生活、海面反光與傍晚燈色。",
+          "tips": "下午到黃昏最適合。可用長焦拍漁船層次，也可用廣角拍港邊環境人像。若風大，注意腳架穩定與海邊安全。",
+          "transportToNext": {
+            "mode": "drive",
+            "duration": 25,
+            "note": "前往基隆廟口夜市，建議停東岸廣場或周邊停車場後步行。",
+            "color": "#F59E0B"
+          },
+          "nearby": [
+            {
+              "name": "潮境公園",
+              "type": "photo_spot",
+              "description": "適合海岸人像、草地與裝置藝術構圖。"
+            },
+            {
+              "name": "望幽谷",
+              "type": "photo_spot",
+              "description": "山海步道視角，天氣好時可拍開闊海景。"
+            },
+            {
+              "name": "八斗子車站",
+              "type": "transport_photo_spot",
+              "description": "海岸鐵道感強，適合日系旅行照片。"
+            }
+          ]
+        },
+        {
+          "id": "d1s6",
+          "name": "基隆廟口夜市",
+          "lat": 25.1284,
+          "lng": 121.7432,
+          "time": "17:10",
+          "duration": 120,
+          "description": "基隆廟口夜市位於基隆市仁愛區仁三路一帶，以奠濟宮周邊小吃攤聞名，是晚餐與夜間街拍的收尾點。",
+          "tips": "推薦拍霓虹、蒸氣、人流與攤販燈箱。食物可安排鼎邊趖、天婦羅、肉羹、蚵仔煎、滷肉飯與泡泡冰。夜拍建議提高 ISO、使用大光圈，保留現場燈色。",
+          "transportToNext": null,
+          "nearby": [
+            {
+              "name": "奠濟宮",
+              "type": "temple",
+              "description": "夜市核心地標，可拍廟口燈光與人流。"
+            },
+            {
+              "name": "愛四路夜市段",
+              "type": "food_street",
+              "description": "小吃集中，適合邊吃邊拍。"
+            },
+            {
+              "name": "基隆港東岸周邊",
+              "type": "night_view",
+              "description": "若還有體力，可補拍港邊夜景。"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
